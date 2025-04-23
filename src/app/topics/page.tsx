@@ -59,6 +59,8 @@ ${keywords ? `키워드: ${keywords}` : ''}
 2. [두 번째 토론 주제]
 3. [세 번째 토론 주제]`;
 
+      console.log('API 요청 시작:', prompt.substring(0, 50) + '...');
+      
       const response = await fetch('/api/generate-topics', {
         method: 'POST',
         headers: {
@@ -70,10 +72,23 @@ ${keywords ? `키워드: ${keywords}` : ''}
       });
 
       const data = await response.json();
+      console.log('API 응답 데이터:', data);
 
       if (!response.ok) {
-        if (data.error === 'API 키가 설정되지 않았습니다') {
+        if (data.error === 'API 키가 설정되지 않았습니다. 서버 환경 변수에 GEMINI_API_KEY를 추가해주세요.') {
           throw new Error('서버에 Gemini API 키가 설정되어 있지 않습니다. 관리자에게 문의하세요.');
+        } else if (data.error && data.error.includes('Gemini API 오류')) {
+          // Gemini API 오류 메시지에서 중요 부분 추출
+          let errorMsg = 'Gemini API 오류가 발생했습니다';
+          try {
+            const errorData = JSON.parse(data.error.replace('Gemini API 오류: ', ''));
+            if (errorData.error && errorData.error.message) {
+              errorMsg = `Gemini API 오류: ${errorData.error.message}`;
+            }
+          } catch (e) {
+            console.error('오류 파싱 실패:', e);
+          }
+          throw new Error(errorMsg);
         } else {
           throw new Error(data.error || '주제 추천에 실패했습니다');
         }
@@ -84,6 +99,10 @@ ${keywords ? `키워드: ${keywords}` : ''}
         .split('\n')
         .filter((line: string) => line.trim().match(/^\d+\.\s/))
         .map((line: string) => line.replace(/^\d+\.\s/, '').trim());
+
+      if (topics.length === 0) {
+        throw new Error('추천 주제를 찾을 수 없습니다. 다른 주제나 키워드로 시도해보세요.');
+      }
 
       setRecommendations(topics);
     } catch (error) {
