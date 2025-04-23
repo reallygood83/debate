@@ -113,9 +113,9 @@ export default function ScenarioEditPage() {
         const exampleScenario = exampleScenarios.find(s => s.id === id);
         if (exampleScenario) {
           setScenario(exampleScenario);
-          
-          // 폼 데이터 초기화
-          setFormData({
+      
+      // 폼 데이터 초기화
+      setFormData({
             title: exampleScenario.title,
             topic: exampleScenario.topic || '',
             grade: exampleScenario.grade || '',
@@ -182,18 +182,26 @@ export default function ScenarioEditPage() {
           topic: formattedScenario.topic || '',
           grade: formattedScenario.grade || '',
           subject: formattedScenario.subject || '',
-          affirmative: formattedScenario.scenarioDetails?.proArguments?.join('\n\n') || '',
-          negative: formattedScenario.scenarioDetails?.conArguments?.join('\n\n') || '',
+          affirmative: Array.isArray(formattedScenario.scenarioDetails?.proArguments) 
+            ? formattedScenario.scenarioDetails.proArguments.join('\n\n') 
+            : formattedScenario.scenarioDetails?.proArguments || '',
+          negative: Array.isArray(formattedScenario.scenarioDetails?.conArguments) 
+            ? formattedScenario.scenarioDetails.conArguments.join('\n\n') 
+            : formattedScenario.scenarioDetails?.conArguments || '',
           background: formattedScenario.scenarioDetails?.background || '',
           teacherNotes: formattedScenario.scenarioDetails?.teacherTips || '',
-          materials: formattedScenario.scenarioDetails?.materials?.join('\n') || '',
-          expectedOutcomes: formattedScenario.scenarioDetails?.expectedOutcomes?.join('\n') || ''
-        });
+          materials: Array.isArray(formattedScenario.scenarioDetails?.materials) 
+            ? formattedScenario.scenarioDetails.materials.join('\n') 
+            : formattedScenario.scenarioDetails?.materials || '',
+          expectedOutcomes: Array.isArray(formattedScenario.scenarioDetails?.expectedOutcomes) 
+            ? formattedScenario.scenarioDetails.expectedOutcomes.join('\n') 
+            : formattedScenario.scenarioDetails?.expectedOutcomes || ''
+      });
       } catch (error: any) {
         console.error('시나리오 불러오기 오류:', error);
         setError(error.message || '시나리오를 불러오는 중 오류가 발생했습니다.');
       } finally {
-        setLoading(false);
+    setLoading(false);
       }
     };
     
@@ -305,8 +313,8 @@ export default function ScenarioEditPage() {
         saveScenario(updatedScenario);
       }
       
-      alert('시나리오가 성공적으로 수정되었습니다.');
-      router.push(`/scenarios/${id}`);
+    alert('시나리오가 성공적으로 수정되었습니다.');
+    router.push(`/scenarios/${id}`);
     } catch (error: any) {
       console.error('시나리오 저장 오류:', error);
       alert(error.message || '시나리오 저장 중 오류가 발생했습니다.');

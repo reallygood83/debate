@@ -1,4 +1,4 @@
-import { StageSection } from '../types/scenario';
+import { StageSection, Activity } from '../types/scenario';
 
 // 기본 스테이지 템플릿 - 경기초등토론교육모형 3단계
 export const defaultStageTemplate: { 
@@ -171,7 +171,7 @@ export function calculateTimings(
   
   Object.keys(result).forEach((stageKey) => {
     const stage = result[stageKey as keyof typeof result];
-    stage.activities.forEach((activity: any) => {
+    stage.activities.forEach((activity: Activity) => {
       // 각 활동 시간을 비율에 맞게 조정 (소수점 반올림)
       activity.durationMinutes = Math.round(activity.durationMinutes * timeRatio);
       // 최소 시간 보장 (1분)

@@ -71,7 +71,10 @@ export function createNewScenario(formData: ScenarioFormData): Scenario {
 }
 
 // JSON에서 Date 객체로 변환 (저장/로드 시 필요)
-function parseScenario(scenario: any): Scenario {
+function parseScenario(scenario: Omit<Scenario, 'createdAt' | 'updatedAt'> & { 
+  createdAt: string | Date; 
+  updatedAt: string | Date; 
+}): Scenario {
   return {
     ...scenario,
     createdAt: new Date(scenario.createdAt),

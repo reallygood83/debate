@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Scenario } from '@/types/scenario';
 import { getSavedScenarios, deleteScenario } from '@/utils/scenarioUtils';
+import { useDebate } from '@/context/DebateContext';
 
 // MongoDB에서 가져온 시나리오 타입
 interface ServerScenario {
@@ -15,9 +16,9 @@ interface ServerScenario {
   createdAt: string;
   updatedAt: string;
   stages?: {
-    stage1: any;
-    stage2: any;
-    stage3: any;
+    stage1: Record<string, unknown>;
+    stage2: Record<string, unknown>;
+    stage3: Record<string, unknown>;
   };
   aiGenerated?: boolean;
   scenarioDetails?: {
@@ -125,9 +126,10 @@ const exampleScenarios: Scenario[] = [
 
 export default function ScenariosPage() {
   const router = useRouter();
+  const { setActiveTopic, setIsDebateActive } = useDebate();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showServerData, setShowServerData] = useState(false);
+  const [showServerData, setShowServerData] = useState(true);
   const [serverScenarios, setServerScenarios] = useState<Scenario[]>([]);
   const [serverDataLoading, setServerDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,25 +137,8 @@ export default function ScenariosPage() {
   const [filterGrade, setFilterGrade] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
 
-  // 로컬 시나리오 로드
-  useEffect(() => {
-    const loadScenarios = () => {
-      try {
-        const savedScenarios = getSavedScenarios();
-        setScenarios(savedScenarios);
-      } catch (error) {
-        console.error('Failed to load scenarios:', error);
-        setError('시나리오를 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadScenarios();
-  }, []);
-  
   // 서버 시나리오 로드
-  const loadServerScenarios = async () => {
+  const loadServerScenarios = useCallback(async () => {
     if (serverDataLoading) return;
     
     setServerDataLoading(true);
@@ -188,14 +173,35 @@ export default function ScenariosPage() {
       
       setServerScenarios(formattedScenarios);
       setShowServerData(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load server scenarios:', error);
-      setError(error.message || '서버 시나리오를 불러오는 중 오류가 발생했습니다.');
+      const errorMessage = error instanceof Error ? error.message : '서버 시나리오를 불러오는 중 오류가 발생했습니다.';
+      setError(errorMessage);
       setShowServerData(false);
     } finally {
       setServerDataLoading(false);
     }
-  };
+  }, [serverDataLoading]);
+  
+  // 로컬 시나리오 로드
+  useEffect(() => {
+    const loadScenarios = () => {
+      try {
+        const savedScenarios = getSavedScenarios();
+        setScenarios(savedScenarios);
+      } catch (error) {
+        console.error('Failed to load scenarios:', error);
+        setError('시나리오를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadScenarios();
+    
+    // 페이지 로드 시 서버 데이터 자동 로드
+    loadServerScenarios();
+  }, [loadServerScenarios]);
   
   // 서버에서 시나리오 삭제
   const handleDeleteServerScenario = async (id: string) => {
@@ -243,6 +249,22 @@ export default function ScenariosPage() {
     });
   };
   
+  // 토론 시작 핸들러
+  const handleDebateStart = (scenario: Scenario) => {
+    // 토론 주제를 전역 상태에 설정
+    if (scenario.topic) {
+      setActiveTopic(scenario.topic);
+    } else {
+      setActiveTopic(scenario.title);
+    }
+    
+    // 토론 활성화 상태 설정
+    setIsDebateActive(true);
+    
+    // 토론 세션 페이지로 이동
+    router.push(`/session?scenarioId=${scenario.id}`);
+  };
+  
   if (loading) {
     return (
       <div className="container mx-auto p-6 text-center">
@@ -270,13 +292,13 @@ export default function ScenariosPage() {
             onClick={() => setShowServerData(false)}
             className={`px-4 py-2 rounded-md ${!showServerData ? 'bg-white shadow-sm' : ''}`}
           >
-            로컬 데이터
+            내 토론자료
           </button>
           <button
             onClick={loadServerScenarios}
             className={`px-4 py-2 rounded-md ${showServerData ? 'bg-white shadow-sm' : ''}`}
           >
-            {serverDataLoading ? '로딩 중...' : '서버 데이터'}
+            {serverDataLoading ? '로딩 중...' : '공유 토론자료'}
           </button>
         </div>
       </div>
@@ -330,12 +352,12 @@ export default function ScenariosPage() {
               </div>
               
               <div className="bg-gray-100 p-4 flex justify-between">
-                <Link
-                  href={`/session?scenarioId=${scenario.id}`}
+                <button
+                  onClick={() => handleDebateStart(scenario)}
                   className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
                 >
                   토론 시작
-                </Link>
+                </button>
                 
                 <Link
                   href={`/scenarios/edit/${scenario.id}`}

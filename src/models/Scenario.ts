@@ -1,4 +1,4 @@
-import mongoose, { Schema, models, model } from 'mongoose';
+import { Schema, models, model } from 'mongoose';
 
 // 활동 스키마
 const ActivitySchema = new Schema({
@@ -54,6 +54,24 @@ const ScenarioSchema = new Schema({
     teacherTips: String,
     keyQuestions: [String]
   }
+}, {
+  // 인덱스 자동 생성 활성화
+  autoIndex: true, 
+  // JSON 직렬화 시 가상 필드 포함
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  // 버전키 비활성화 (서버리스 환경에서 성능 향상)
+  versionKey: false
+});
+
+// 자주 조회되는 필드에 인덱스 추가
+ScenarioSchema.index({ createdAt: -1 }); // 생성일 기준 내림차순 정렬을 위한 인덱스
+ScenarioSchema.index({ title: 'text' }); // 제목 기준 텍스트 검색 인덱스
+ScenarioSchema.index({ aiGenerated: 1 }); // AI 생성 필터링을 위한 인덱스
+
+// 대용량 데이터 처리를 위한 lean() 메서드를 기본으로 설정하는 쿼리 미들웨어
+ScenarioSchema.pre('find', function() {
+  this.lean();
 });
 
 // 모델이 이미 있는지 확인하고 없으면 생성

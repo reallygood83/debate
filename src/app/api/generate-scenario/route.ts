@@ -1,12 +1,41 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import type { NextRequest } from 'next/server';
+import { getEnvVar } from '@/utils/envUtils';
 
-// Google Gemini API 초기화
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// API 키 검증
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Google Gemini API 초기화 - 필요시 초기화 방식으로 변경
+let genAI: GoogleGenerativeAI | null = null;
+
+// 응답 데이터 타입 정의
+interface ScenarioData {
+  title: string;
+  topic: string;
+  keywords?: string[];
+  grade?: string;
+  subject?: string | string[];
+  background: string;
+  proArguments: string[];
+  conArguments: string[];
+  teacherTips: string;
+  keyQuestions?: string[];
+  expectedOutcomes: string[];
+  materials?: string[];
+  [key: string]: unknown;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // 환경 변수 유틸리티 사용
+    const apiKey = getEnvVar('GEMINI_API_KEY', true);
+    
+    // API 키가 있을 때만 Gemini API 클라이언트 초기화
+    if (!genAI) {
+      genAI = new GoogleGenerativeAI(apiKey);
+    }
+
     // 요청에서 토론 주제 추출
     const body = await request.json();
     const { topic, grade, subject } = body;
@@ -91,6 +120,12 @@ export async function POST(request: NextRequest) {
       주의: 응답을 반드시 JSON 형식으로 제공해야 합니다. 외부 마크다운이나 설명 없이 오직 JSON 객체만 반환해주세요.
     `;
 
+    // API 호출에 타임아웃 적용
+    const timeoutMs = 25000; // 25초 타임아웃
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Gemini API 요청 시간 초과')), timeoutMs);
+    });
+
     // Gemini API 호출
     const chat = model.startChat({
       history: [
@@ -105,9 +140,11 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    const result = await chat.sendMessage(userPrompt);
+    // 타임아웃 처리
+    const resultPromise = chat.sendMessage(userPrompt);
+    const result = await Promise.race([resultPromise, timeoutPromise]) as any;
     const content = result.response.text();
-    let scenarioData: any;
+    let scenarioData: ScenarioData;
     
     try {
       // JSON 형식 추출 (경우에 따라 Gemini가 마크다운 코드 블록 안에 JSON을 반환할 수 있음)
@@ -119,7 +156,7 @@ export async function POST(request: NextRequest) {
         jsonContent = jsonMatch[1];
       }
       
-      scenarioData = JSON.parse(jsonContent);
+      scenarioData = JSON.parse(jsonContent) as ScenarioData;
       
       // 필수 필드 확인
       const requiredFields = ['title', 'topic', 'background', 'proArguments', 'conArguments', 'teacherTips', 'expectedOutcomes'];
@@ -137,7 +174,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-    } catch (error) {
+    } catch (err: unknown) {
       console.error('JSON 파싱 오류:', content);
       return NextResponse.json(
         { error: 'AI 응답을 파싱하는 중 오류가 발생했습니다.' },
@@ -151,12 +188,23 @@ export async function POST(request: NextRequest) {
       data: scenarioData
     });
     
-  } catch (error: any) {
-    console.error('시나리오 생성 오류:', error);
+  } catch (err: unknown) {
+    console.error('시나리오 생성 오류:', err);
+    // 타임아웃 오류 특별 처리
+    if (err instanceof Error && err.message.includes('시간 초과')) {
+      return NextResponse.json(
+        { 
+          error: 'AI 응답 생성에 시간이 너무 오래 걸립니다. 나중에 다시 시도해 주세요.',
+          details: '요청 시간 초과' 
+        },
+        { status: 408 }
+      );
+    }
+    const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
     return NextResponse.json(
       { 
         error: '시나리오 생성 중 오류가 발생했습니다.',
-        details: error.message 
+        details: errorMessage 
       },
       { status: 500 }
     );
