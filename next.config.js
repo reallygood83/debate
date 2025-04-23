@@ -24,14 +24,6 @@ const nextConfig = {
       },
     ];
   },
-  // API 요청 타임아웃 설정
-  api: {
-    responseLimit: '16mb',
-    bodyParser: {
-      sizeLimit: '16mb',
-    },
-    externalResolver: true,
-  },
   // CDN 캐싱 최적화
   experimental: {
     optimizeCss: false,

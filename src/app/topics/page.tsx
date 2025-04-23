@@ -1,39 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
 import { CopyIcon, CheckIcon } from '@radix-ui/react-icons';
 import { Loader2 } from 'lucide-react';
 
 export default function TopicsPage() {
-  const { toast } = useToast();
   const [gradeGroup, setGradeGroup] = useState<string>('');
   const [topic, setTopic] = useState<string>('');
   const [keywords, setKeywords] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<{visible: boolean, title: string, description?: string}>({
+    visible: false,
+    title: '',
+  });
+
+  const showToast = (title: string, description?: string) => {
+    setToastMessage({
+      visible: true,
+      title,
+      description
+    });
+    
+    setTimeout(() => {
+      setToastMessage({visible: false, title: ''});
+    }, 3000);
+  };
 
   const handleRecommend = async () => {
     if (!gradeGroup) {
-      toast({
-        title: '학년군을 선택해주세요',
-        variant: 'destructive',
-      });
+      showToast('학년군을 선택해주세요');
       return;
     }
 
     if (!topic) {
-      toast({
-        title: '주제 분야를 입력해주세요',
-        variant: 'destructive',
-      });
+      showToast('주제 분야를 입력해주세요');
       return;
     }
 
@@ -82,11 +84,7 @@ ${keywords ? `키워드: ${keywords}` : ''}
       setRecommendations(topics);
     } catch (error) {
       console.error('주제 추천 오류:', error);
-      toast({
-        title: '주제 추천 중 오류가 발생했습니다',
-        description: '잠시 후 다시 시도해주세요',
-        variant: 'destructive',
-      });
+      showToast('주제 추천 중 오류가 발생했습니다', '잠시 후 다시 시도해주세요');
     } finally {
       setIsLoading(false);
     }
@@ -95,10 +93,7 @@ ${keywords ? `키워드: ${keywords}` : ''}
   const handleCopy = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
-    toast({
-      title: '복사되었습니다',
-      description: text,
-    });
+    showToast('복사되었습니다', text);
     
     setTimeout(() => {
       setCopiedIndex(null);
@@ -109,87 +104,103 @@ ${keywords ? `키워드: ${keywords}` : ''}
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-8 text-center">AI 토론 주제 추천</h1>
       
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>토론 주제 추천 받기</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="bg-white rounded-lg shadow-md mb-8 p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-2">토론 주제 추천 받기</h2>
+        </div>
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="grade-group">학년군 선택</Label>
-            <Select value={gradeGroup} onValueChange={setGradeGroup}>
-              <SelectTrigger id="grade-group">
-                <SelectValue placeholder="학년군을 선택하세요" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="초등학교 저학년(1-3학년)">초등학교 저학년(1-3학년)</SelectItem>
-                <SelectItem value="초등학교 고학년(4-6학년)">초등학교 고학년(4-6학년)</SelectItem>
-                <SelectItem value="중학교(1-3학년)">중학교(1-3학년)</SelectItem>
-                <SelectItem value="고등학교(1-3학년)">고등학교(1-3학년)</SelectItem>
-              </SelectContent>
-            </Select>
+            <label htmlFor="grade-group" className="block text-sm font-medium">학년군 선택</label>
+            <select
+              id="grade-group"
+              value={gradeGroup}
+              onChange={(e) => setGradeGroup(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">학년군을 선택하세요</option>
+              <option value="초등학교 저학년(1-3학년)">초등학교 저학년(1-3학년)</option>
+              <option value="초등학교 고학년(4-6학년)">초등학교 고학년(4-6학년)</option>
+              <option value="중학교(1-3학년)">중학교(1-3학년)</option>
+              <option value="고등학교(1-3학년)">고등학교(1-3학년)</option>
+            </select>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="topic">주제 분야</Label>
-            <Input
+            <label htmlFor="topic" className="block text-sm font-medium">주제 분야</label>
+            <input
               id="topic"
+              type="text"
               placeholder="예: 환경, 과학기술, 사회문제, 교육 등"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="keywords">키워드 (선택사항)</Label>
-            <Textarea
+            <label htmlFor="keywords" className="block text-sm font-medium">키워드 (선택사항)</label>
+            <textarea
               id="keywords"
               placeholder="관련 키워드를 입력하세요 (쉼표로 구분)"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
             />
           </div>
           
-          <Button 
+          <button 
             onClick={handleRecommend} 
             disabled={isLoading}
-            className="w-full"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <svg className="inline mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
                 추천 중...
               </>
             ) : '토론 주제 추천받기'}
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
+      </div>
       
       {recommendations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>추천 토론 주제</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recommendations.map((recommendation, index) => (
-                <div key={index} className="flex items-start justify-between p-4 border rounded-md">
-                  <p className="text-lg flex-grow">{recommendation}</p>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleCopy(recommendation, index)}
-                  >
-                    {copiedIndex === index ? (
-                      <CheckIcon className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <CopyIcon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">추천 토론 주제</h2>
+          </div>
+          <div className="space-y-4">
+            {recommendations.map((recommendation, index) => (
+              <div key={index} className="flex items-start justify-between p-4 border rounded-md">
+                <p className="text-lg flex-grow">{recommendation}</p>
+                <button
+                  onClick={() => handleCopy(recommendation, index)}
+                  className="ml-2 p-2 text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md"
+                >
+                  {copiedIndex === index ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Toast 메시지 */}
+      {toastMessage.visible && (
+        <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg max-w-xs z-50">
+          <div className="font-medium">{toastMessage.title}</div>
+          {toastMessage.description && <div className="text-sm text-gray-300">{toastMessage.description}</div>}
+        </div>
       )}
     </div>
   );
