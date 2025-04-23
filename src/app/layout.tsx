@@ -19,6 +19,7 @@ export default function RootLayout({
     { id: 'home', title: '홈', href: '/' },
     { id: 'scenarios', title: '시나리오', href: '/scenarios' },
     { id: 'session', title: '토론 진행', href: '/session' },
+    { id: 'feedback', title: '피드백 관리', href: 'https://lovabledebate.vercel.app/', external: true },
     { id: 'resources', title: '토론 자료', href: '/resources' },
     { id: 'about', title: '소개', href: '/about' }
   ];
@@ -35,12 +36,23 @@ export default function RootLayout({
                 <ul className="flex items-center space-x-8">
                 {navItems.map((item) => (
                     <li key={item.id}>
-                  <Link
-                    href={item.href}
+                    {item.external ? (
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-white hover:text-blue-200 transition-colors text-sm"
-                  >
-                    {item.title}
-                  </Link>
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className="text-white hover:text-blue-200 transition-colors text-sm"
+                      >
+                        {item.title}
+                      </Link>
+                    )}
                     </li>
                 ))}
                 </ul>
