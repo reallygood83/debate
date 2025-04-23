@@ -5,6 +5,7 @@ interface CachedConnection {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
   isConnecting: boolean;
+  lastConnectedAt?: number;
 }
 
 // global 타입에 mongoose 프로퍼티 추가
@@ -24,8 +25,12 @@ const cached: CachedConnection = global.mongooseConnection || {
 global.mongooseConnection = cached;
 
 // 연결 재시도 설정
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5; // 최대 재시도 횟수 증가
 const INITIAL_RETRY_DELAY_MS = 500;
+
+// Connection Health Check 설정
+const CONNECTION_HEALTH_CHECK_INTERVAL = 60000; // 1분
+const CONNECTION_MAX_AGE = 3600000; // 1시간
 
 // Atlas IP 액세스 리스트 확인 팁 표시 여부
 let hasShownAtlasAccessTip = false;
@@ -77,9 +82,23 @@ async function connectWithRetry(
   }
 }
 
+// 연결 상태 확인
+function isConnectionHealthy(): boolean {
+  if (!cached.conn || !cached.lastConnectedAt) return false;
+  
+  // 연결 상태 확인
+  const isConnected = cached.conn.connection.readyState === 1;
+  
+  // 연결 수명 확인
+  const connectionAge = Date.now() - cached.lastConnectedAt;
+  const isConnectionFresh = connectionAge < CONNECTION_MAX_AGE;
+  
+  return isConnected && isConnectionFresh;
+}
+
 async function dbConnect() {
-  // 이미 연결되어 있으면 기존 연결 반환
-  if (cached.conn) {
+  // 이미 건강한 연결이 있으면 기존 연결 반환
+  if (isConnectionHealthy()) {
     return cached.conn;
   }
 
@@ -95,34 +114,55 @@ async function dbConnect() {
     // 연결 중 상태로 설정
     cached.isConnecting = true;
 
-    if (!cached.promise) {
-      // 서버리스 환경에 최적화된 연결 설정
-      const opts: mongoose.ConnectOptions = {
-        bufferCommands: false,
-        // 연결 타임아웃 및 소켓 타임아웃 설정
-        connectTimeoutMS: 10000, // 10초
-        socketTimeoutMS: 45000, // 45초
-        serverSelectionTimeoutMS: 10000, // 10초
-        // 연결 풀 설정 - Vercel 서버리스 환경에 최적화
-        maxPoolSize: 10, // 서버리스 환경에서는 낮은 값이 적합
-        minPoolSize: 1, 
-        // 유휴 연결 관리 (Vercel 함수 최대 실행 시간 고려)
-        maxIdleTimeMS: 30000, // 30초
-        // 연결 대기열이 가득 찼을 때의 동작
-        waitQueueTimeoutMS: 10000,
-      };
+    // 서버리스 환경에 최적화된 연결 설정
+    const opts: mongoose.ConnectOptions = {
+      bufferCommands: false,
+      // 연결 타임아웃 및 소켓 타임아웃 설정
+      connectTimeoutMS: 20000, // 20초로 증가
+      socketTimeoutMS: 60000, // 60초로 증가
+      serverSelectionTimeoutMS: 15000, // 15초로 증가
+      // 연결 풀 설정 - Vercel 서버리스 환경에 최적화
+      maxPoolSize: 20, // 연결 풀 크기 증가
+      minPoolSize: 5, 
+      // 유휴 연결 관리 (Vercel 함수 최대 실행 시간 고려)
+      maxIdleTimeMS: 60000, // 60초로 증가
+      // 연결 대기열이 가득 찼을 때의 동작
+      waitQueueTimeoutMS: 15000, // 15초로 증가
+      // 자동 재연결 설정
+      autoIndex: false,      // 배포 환경에서 인덱스 자동 생성 비활성화
+      autoCreate: false,     // 배포 환경에서 컬렉션 자동 생성 비활성화
+    };
 
-      console.log('🔄 MongoDB 연결 시도 중...');
-      cached.promise = connectWithRetry(MONGODB_URI, opts);
+    console.log('🔄 MongoDB 연결 시도 중...');
+    
+    // 기존 연결이 있지만 건강하지 않은 경우 재연결
+    if (cached.conn) {
+      console.log('⚠️ 기존 연결이 유효하지 않아 재연결합니다...');
+      await cached.conn.disconnect();
+      cached.conn = null;
+      cached.promise = null;
     }
     
+    cached.promise = connectWithRetry(MONGODB_URI, opts);
     cached.conn = await cached.promise;
+    cached.lastConnectedAt = Date.now();
     cached.isConnecting = false;
     
     // 디버깅 모드 설정 (개발 환경에서만 활성화)
     mongoose.set('debug', process.env.NODE_ENV === 'development');
     
     console.log('✅ MongoDB 연결 성공');
+    
+    // 주기적으로 연결 상태 확인하는 로직 추가
+    if (typeof window === 'undefined') { // 서버 사이드에서만 실행
+      setInterval(() => {
+        if (!isConnectionHealthy() && !cached.isConnecting) {
+          console.log('🔄 MongoDB 연결 상태 확인: 재연결 필요');
+          dbConnect().catch(e => console.error('❌ 주기적 재연결 실패:', e));
+        }
+      }, CONNECTION_HEALTH_CHECK_INTERVAL);
+    }
+    
     return cached.conn;
   } catch (e) {
     cached.isConnecting = false;

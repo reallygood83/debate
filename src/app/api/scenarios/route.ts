@@ -4,7 +4,7 @@ import Scenario from '@/models/Scenario';
 import type { NextRequest } from 'next/server';
 
 // 응답 제한 시간 설정 (ms)
-const RESPONSE_TIMEOUT = 7000; // 7초
+const RESPONSE_TIMEOUT = 30000; // 30초
 
 // 타임아웃 처리 함수
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
