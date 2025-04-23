@@ -7,6 +7,20 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
+    // MongoDB URI가 없거나 연결에 실패했을 경우 빈 목록 반환
+    if (!process.env.MONGODB_URI) {
+      console.warn('MongoDB URI가 설정되지 않았습니다. 더미 데이터를 반환합니다.');
+      return NextResponse.json({
+        topics: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0
+        }
+      });
+    }
+    
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
     const page = parseInt(searchParams.get('page') || '1');
@@ -48,6 +62,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
+    
+    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
+    if (!process.env.MONGODB_URI) {
+      return NextResponse.json(
+        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 저장할 수 없습니다.' },
+        { status: 503 }
+      );
+    }
     
     const body = await request.json();
     

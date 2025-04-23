@@ -9,6 +9,15 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    
+    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
+    if (!process.env.MONGODB_URI) {
+      return NextResponse.json(
+        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 조회할 수 없습니다.' },
+        { status: 503 }
+      );
+    }
+    
     const topic = await Topic.findById(params.id);
     
     if (!topic) {
@@ -36,6 +45,14 @@ export async function PUT(
   try {
     const body = await request.json();
     await connectDB();
+    
+    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
+    if (!process.env.MONGODB_URI) {
+      return NextResponse.json(
+        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 수정할 수 없습니다.' },
+        { status: 503 }
+      );
+    }
     
     const topic = await Topic.findByIdAndUpdate(
       params.id,
@@ -67,6 +84,15 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+    
+    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
+    if (!process.env.MONGODB_URI) {
+      return NextResponse.json(
+        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 삭제할 수 없습니다.' },
+        { status: 503 }
+      );
+    }
+    
     const topic = await Topic.findByIdAndDelete(params.id);
 
     if (!topic) {
