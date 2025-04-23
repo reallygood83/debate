@@ -21,7 +21,20 @@ export async function GET(request: NextRequest) {
   console.log("====== GET /api/scenarios 실행 시작 ======");
   try {
     console.log("MongoDB 연결 시도 중...");
-    await dbConnect();
+    const conn = await dbConnect();
+    
+    // MongoDB 연결 상태 확인
+    if (!conn || conn.connection.readyState !== 1) {
+      console.error("MongoDB 연결 실패 - 연결 상태:", conn ? conn.connection.readyState : 'connection null');
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'MongoDB 연결에 실패했습니다. 잠시 후 다시 시도해주세요.' 
+        },
+        { status: 503 }  // Service Unavailable
+      );
+    }
+    
     console.log("MongoDB 연결 성공!");
     
     // URL 쿼리 매개변수 파싱
@@ -56,6 +69,12 @@ export async function GET(request: NextRequest) {
     console.log(`쿼리 성공: ${scenarios.length}개의 시나리오를 가져옴`);
     
     console.log("전체 문서 수 쿼리 실행 중...");
+    
+    // 전체 문서 수 확인 전에 다시 한 번 연결 상태 확인
+    if (conn.connection.readyState !== 1) {
+      throw new Error('MongoDB 연결이 중간에 끊어졌습니다.');
+    }
+    
     // 전체 문서 수 쿼리도 타임아웃 적용
     const totalCount = await withTimeout(
       Scenario.countDocuments(search ? { $text: { $search: search } } : {}),
@@ -78,17 +97,39 @@ export async function GET(request: NextRequest) {
     console.error("====== GET /api/scenarios 오류 발생 ======");
     console.error('시나리오 조회 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
     
+    // MongoNotConnectedError 특별 처리
+    if (error instanceof Error && 
+        (error.name === 'MongoNotConnectedError' || 
+         error.message.includes('Client must be connected')) ) {
+      console.error("MongoDB 연결 문제 발생");
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'MongoDB 연결 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          details: error.message
+        },
+        { status: 503 }
+      );
+    }
+    
     // 타임아웃 에러 감지
     if (error instanceof Error && error.message.includes('시간이 초과')) {
       console.error("API 타임아웃 발생");
       return NextResponse.json(
-        { error: '요청 시간이 초과되었습니다. 나중에 다시 시도해주세요.' },
+        { 
+          success: false,
+          error: '요청 시간이 초과되었습니다. 나중에 다시 시도해주세요.' 
+        },
         { status: 408 }
       );
     }
     
     return NextResponse.json(
-      { error: '시나리오 조회 중 오류가 발생했습니다.', details: error instanceof Error ? error.message : String(error) },
+      { 
+        success: false,
+        error: '시나리오 조회 중 오류가 발생했습니다.', 
+        details: error instanceof Error ? error.message : String(error) 
+      },
       { status: 500 }
     );
   }
@@ -100,7 +141,20 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("MongoDB 연결 시도 중...");
-    await dbConnect();
+    const conn = await dbConnect();
+    
+    // MongoDB 연결 상태 확인
+    if (!conn || conn.connection.readyState !== 1) {
+      console.error("MongoDB 연결 실패 - 연결 상태:", conn ? conn.connection.readyState : 'connection null');
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'MongoDB 연결에 실패했습니다. 잠시 후 다시 시도해주세요.' 
+        },
+        { status: 503 }
+      );
+    }
+    
     console.log("MongoDB 연결 성공!");
     
     // 시나리오 생성
@@ -125,17 +179,39 @@ export async function POST(request: NextRequest) {
     console.error("====== POST /api/scenarios 오류 발생 ======");
     console.error('시나리오 저장 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
     
+    // MongoNotConnectedError 특별 처리
+    if (error instanceof Error && 
+        (error.name === 'MongoNotConnectedError' || 
+         error.message.includes('Client must be connected')) ) {
+      console.error("MongoDB 연결 문제 발생");
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'MongoDB 연결 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          details: error.message
+        },
+        { status: 503 }
+      );
+    }
+    
     // 타임아웃 에러 감지
     if (error instanceof Error && error.message.includes('시간이 초과')) {
       console.error("API 타임아웃 발생");
       return NextResponse.json(
-        { error: '요청 시간이 초과되었습니다. 나중에 다시 시도해주세요.' },
+        { 
+          success: false,
+          error: '요청 시간이 초과되었습니다. 나중에 다시 시도해주세요.' 
+        },
         { status: 408 }
       );
     }
     
     return NextResponse.json(
-      { error: '시나리오 저장 중 오류가 발생했습니다.', details: error instanceof Error ? error.message : String(error) },
+      { 
+        success: false,
+        error: '시나리오 저장 중 오류가 발생했습니다.', 
+        details: error instanceof Error ? error.message : String(error) 
+      },
       { status: 500 }
     );
   }

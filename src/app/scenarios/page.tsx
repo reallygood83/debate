@@ -148,7 +148,8 @@ export default function ScenariosPage() {
       const response = await fetch('/api/scenarios');
       
       if (!response.ok) {
-        throw new Error('서버에서 시나리오를 불러오는 중 오류가 발생했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || `서버 오류: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
@@ -200,7 +201,15 @@ export default function ScenariosPage() {
       const errorMessage = error instanceof Error ? error.message : '서버 시나리오를 불러오는 중 오류가 발생했습니다.';
       setError(errorMessage);
       setShowServerData(false);
+      
+      // MongoDB 연결 오류일 경우 특별 메시지 표시
+      if (error instanceof Error && 
+          (error.message.includes('MongoDB 연결') || 
+           error.message.includes('연결에 실패'))) {
+        setError('MongoDB 연결 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } finally {
+      // 항상 로딩 상태를 해제하여 UI가 멈추지 않게 함
       setServerDataLoading(false);
     }
   }, [serverDataLoading]);
@@ -221,7 +230,7 @@ export default function ScenariosPage() {
     
     loadScenarios();
     
-    // 페이지 로드 시 서버 데이터 자동 로드
+    // 페이지 로드 시 서버 데이터 자동 로드 (필요에 따라 주석 처리 가능)
     loadServerScenarios();
   }, [loadServerScenarios]);
   
@@ -326,24 +335,59 @@ export default function ScenariosPage() {
       <div className="mb-6 flex items-center">
         <div className="rounded-md bg-gray-200 p-1 flex">
           <button
-            onClick={() => setShowServerData(false)}
+            onClick={() => {
+              setShowServerData(false);
+              setError(null); // 전환 시 오류 메시지 초기화
+            }}
             className={`px-4 py-2 rounded-md ${!showServerData ? 'bg-white shadow-sm' : ''}`}
           >
             내 토론자료
           </button>
           <button
-            onClick={loadServerScenarios}
-            className={`px-4 py-2 rounded-md ${showServerData ? 'bg-white shadow-sm' : ''}`}
+            onClick={() => {
+              loadServerScenarios();
+            }}
+            disabled={serverDataLoading} // 로딩 중에는 버튼 비활성화
+            className={`px-4 py-2 rounded-md ${showServerData ? 'bg-white shadow-sm' : ''} ${serverDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {serverDataLoading ? '로딩 중...' : '공유 토론자료'}
           </button>
         </div>
+        {/* 새로고침 버튼 추가 */}
+        {showServerData && (
+          <button
+            onClick={loadServerScenarios}
+            disabled={serverDataLoading}
+            className="ml-2 p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="새로고침"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        )}
       </div>
       
-      {/* 오류 메시지 */}
+      {/* 오류 메시지 - 더 눈에 띄게 개선 */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-          {error}
+          <div className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{error}</span>
+          </div>
+          {showServerData && (
+            <p className="mt-2 text-sm">
+              서버 연결 문제가 발생했습니다. 
+              <button 
+                onClick={() => setShowServerData(false)} 
+                className="ml-2 text-red-600 underline"
+              >
+                내 토론자료로 전환하기
+              </button>
+            </p>
+          )}
         </div>
       )}
       

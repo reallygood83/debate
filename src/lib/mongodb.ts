@@ -25,7 +25,7 @@ const cached: CachedConnection = global.mongooseConnection || {
 global.mongooseConnection = cached;
 
 // 연결 재시도 설정
-const MAX_RETRIES = 5; // 최대 재시도 횟수 증가
+const MAX_RETRIES = 3; // 서버리스 함수 실행 시간 고려해 3으로 조정
 const INITIAL_RETRY_DELAY_MS = 500;
 
 // Connection Health Check 설정
@@ -125,7 +125,14 @@ async function dbConnect() {
   // 연결 진행 중인 경우 기존 Promise 반환
   if (cached.isConnecting && cached.promise) {
     console.log('MongoDB 연결 진행 중. 연결 완료 대기');
-    return cached.promise;
+    try {
+      return await cached.promise;
+    } catch (error) {
+      console.error('기존 연결 요청 실패, 새로 시도합니다:', error);
+      cached.isConnecting = false;
+      cached.promise = null;
+      // 실패한 경우 계속 진행하여 새로운 연결 시도
+    }
   }
 
   try {
@@ -146,16 +153,16 @@ async function dbConnect() {
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
       // 연결 타임아웃 및 소켓 타임아웃 설정
-      connectTimeoutMS: 20000, // 20초로 증가
-      socketTimeoutMS: 60000, // 60초로 증가
-      serverSelectionTimeoutMS: 15000, // 15초로 증가
+      connectTimeoutMS: 10000, // 10초로 축소 (서버리스 함수 시간 제한 고려)
+      socketTimeoutMS: 45000, // 45초로 조정
+      serverSelectionTimeoutMS: 10000, // 10초로 축소
       // 연결 풀 설정 - Vercel 서버리스 환경에 최적화
-      maxPoolSize: 20, // 연결 풀 크기 증가
+      maxPoolSize: 10, // 연결 풀 크기 조정
       minPoolSize: 5, 
       // 유휴 연결 관리 (Vercel 함수 최대 실행 시간 고려)
-      maxIdleTimeMS: 60000, // 60초로 증가
+      maxIdleTimeMS: 60000, // 60초
       // 연결 대기열이 가득 찼을 때의 동작
-      waitQueueTimeoutMS: 15000, // 15초로 증가
+      waitQueueTimeoutMS: 10000, // 10초로 축소
       // 자동 재연결 설정
       autoIndex: false,      // 배포 환경에서 인덱스 자동 생성 비활성화
       autoCreate: false,     // 배포 환경에서 컬렉션 자동 생성 비활성화
@@ -167,30 +174,43 @@ async function dbConnect() {
     if (cached.conn) {
       console.log('⚠️ 기존 연결이 유효하지 않아 재연결합니다...');
       console.log(`기존 연결 상태: readyState=${cached.conn.connection.readyState}, lastConnectedAt=${cached.lastConnectedAt}`);
-      await cached.conn.disconnect();
+      try {
+        await cached.conn.disconnect();
+      } catch (disconnectError) {
+        console.error('기존 연결 해제 중 오류 발생:', disconnectError);
+        // 오류가 발생해도 계속 진행
+      }
       cached.conn = null;
       cached.promise = null;
     }
     
+    // 명확하게 Promise 설정 및 연결 시도
     cached.promise = connectWithRetry(MONGODB_URI, opts);
-    cached.conn = await cached.promise;
-    cached.lastConnectedAt = Date.now();
-    cached.isConnecting = false;
     
-    // 디버깅 모드 설정 (개발 환경에서만 활성화)
-    mongoose.set('debug', process.env.NODE_ENV === 'development');
-    
-    console.log('✅ MongoDB 연결 성공');
-    console.log(`연결 상태: readyState=${cached.conn.connection.readyState}, lastConnectedAt=${cached.lastConnectedAt}`);
-    
-    // 주기적으로 연결 상태 확인하는 로직 추가
-    if (typeof window === 'undefined') { // 서버 사이드에서만 실행
-      setInterval(() => {
-        if (!isConnectionHealthy() && !cached.isConnecting) {
-          console.log('🔄 MongoDB 연결 상태 확인: 재연결 필요');
-          dbConnect().catch(e => console.error('❌ 주기적 재연결 실패:', e));
-        }
-      }, CONNECTION_HEALTH_CHECK_INTERVAL);
+    try {
+      cached.conn = await cached.promise;
+      cached.lastConnectedAt = Date.now();
+      
+      // 디버깅 모드 설정 (개발 환경에서만 활성화)
+      mongoose.set('debug', process.env.NODE_ENV === 'development');
+      
+      console.log('✅ MongoDB 연결 성공');
+      console.log(`연결 상태: readyState=${cached.conn.connection.readyState}, lastConnectedAt=${cached.lastConnectedAt}`);
+      
+      // 주기적으로 연결 상태 확인하는 로직 추가
+      if (typeof window === 'undefined') { // 서버 사이드에서만 실행
+        setInterval(() => {
+          if (!isConnectionHealthy() && !cached.isConnecting) {
+            console.log('🔄 MongoDB 연결 상태 확인: 재연결 필요');
+            dbConnect().catch(e => console.error('❌ 주기적 재연결 실패:', e));
+          }
+        }, CONNECTION_HEALTH_CHECK_INTERVAL);
+      }
+    } catch (error) {
+      cached.promise = null;
+      throw error; // 다시 던져서 외부에서 처리할 수 있게 함
+    } finally {
+      cached.isConnecting = false;
     }
     
     console.log('---- MongoDB 연결 함수 완료 ----');
