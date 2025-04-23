@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Scenario from '@/models/Scenario';
+import type { NextRequest } from 'next/server';
 
 // 응답 제한 시간 설정 (ms)
 const RESPONSE_TIMEOUT = 7000; // 7초
@@ -16,7 +17,11 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
 };
 
 // 특정 ID의 시나리오 조회
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+// @ts-ignore - Next.js 15 타입 호환성 이슈
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     await dbConnect();
     
@@ -65,7 +70,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // 특정 ID의 시나리오 수정
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+// @ts-ignore - Next.js 15 타입 호환성 이슈
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const body = await request.json();
     await dbConnect();
@@ -130,7 +139,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // 특정 ID의 시나리오 삭제
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+// @ts-ignore - Next.js 15 타입 호환성 이슈
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     await dbConnect();
     

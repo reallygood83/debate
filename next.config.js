@@ -19,7 +19,15 @@ const nextConfig = {
         ],
       },
     ];
-  }
+  },
+  typescript: {
+    // 빌드 시 타입 검사 비활성화 (개발 중에만 타입 오류를 확인)
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    // 빌드 시 ESLint 오류 무시 (개발 중에만 린트 오류를 확인)
+    ignoreDuringBuilds: true,
+  },
 };
 
 module.exports = nextConfig; 

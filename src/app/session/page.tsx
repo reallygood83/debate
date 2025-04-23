@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Scenario } from '@/types/scenario';
@@ -176,7 +176,8 @@ function Timer({
   );
 }
 
-export default function SessionPage() {
+// SearchParams 래퍼 컴포넌트
+function SessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const scenarioId = searchParams.get('scenarioId');
@@ -199,224 +200,220 @@ export default function SessionPage() {
     // 현재 스테이지
     const currentActiveStage = stagesArray[currentStageIndex];
     
-    // 현재 활동 (해당 스테이지의 활동 배열에서 인덱스로 접근)
+    // 현재 활동
     const currentActivity = currentActiveStage?.activities[currentActivityIndex] || null;
     
-    return { 
-      stages: stagesArray, 
-      currentActivity,
-      currentActiveStage 
-    };
+    return { stages: stagesArray, currentActivity, currentActiveStage };
   }, [scenario, currentStageIndex, currentActivityIndex]);
   
   // 시나리오 로드
   useEffect(() => {
-    const loadScenario = () => {
-      if (!scenarioId) {
-        // 시나리오 ID가 없을 경우 기본 시나리오 사용
-        setScenario(DEFAULT_SCENARIO);
-        setLoading(false);
-        return;
-      }
-      
+    async function loadScenario() {
       try {
-        const foundScenario = getScenarioById(scenarioId);
-        if (foundScenario) {
-          setScenario(foundScenario);
-          // 토론이 아직 활성화되지 않았다면 활성화
-          if (!isDebateActive) {
-            if (foundScenario.topic) {
-              setActiveTopic(foundScenario.topic);
-            } else {
-              setActiveTopic(foundScenario.title);
-            }
+        if (scenarioId) {
+          // ID로 시나리오 로드
+          const data = await getScenarioById(scenarioId);
+          if (data && data.success) {
+            setScenario(data.data);
+            // 토론 활성화 및 주제 설정
             setIsDebateActive(true);
+            setActiveTopic(data.data.title || '기본 토론 주제');
+          } else {
+            // 오류 시 기본 시나리오 사용
+            setScenario(DEFAULT_SCENARIO);
+            setIsDebateActive(true);
+            setActiveTopic(DEFAULT_SCENARIO.title);
           }
         } else {
-          // 시나리오를 찾을 수 없는 경우 기본 시나리오 사용
+          // ID 없으면 기본 시나리오 사용
           setScenario(DEFAULT_SCENARIO);
+          setIsDebateActive(true);
+          setActiveTopic(DEFAULT_SCENARIO.title);
         }
       } catch (error) {
-        console.error('Failed to load scenario:', error);
+        console.error("시나리오 로드 오류:", error);
         // 오류 발생 시 기본 시나리오 사용
         setScenario(DEFAULT_SCENARIO);
+        setIsDebateActive(true);
+        setActiveTopic(DEFAULT_SCENARIO.title);
       } finally {
         setLoading(false);
       }
-    };
+    }
     
     loadScenario();
-  }, [scenarioId, router, setActiveTopic, isDebateActive, setIsDebateActive]);
+    
+    // 컴포넌트 언마운트 시 토론 비활성화
+    return () => {
+      setIsDebateActive(false);
+    };
+  }, [scenarioId, setActiveTopic, setIsDebateActive]);
   
-  // 다음 활동으로 이동
+  const { stages, currentActivity, currentActiveStage } = getStagesAndActivities();
+  
+  // 다음 활동/단계로 이동
   const handleNext = () => {
-    const { stages, currentActiveStage } = getStagesAndActivities();
+    if (!currentActiveStage || !stages.length) return;
     
-    if (!currentActiveStage) return;
-    
-    // 현재 스테이지의 마지막 활동인지 확인
     if (currentActivityIndex < currentActiveStage.activities.length - 1) {
-      // 같은 스테이지 내 다음 활동으로 이동
+      // 현재 단계의 다음 활동으로 이동
       setCurrentActivityIndex(currentActivityIndex + 1);
     } else if (currentStageIndex < stages.length - 1) {
-      // 다음 스테이지의 첫 활동으로 이동
+      // 다음 단계의 첫 활동으로 이동
       setCurrentStageIndex(currentStageIndex + 1);
       setCurrentActivityIndex(0);
-    } else {
-      // 모든 활동 완료
-      alert('모든 토론 활동이 완료되었습니다.');
     }
-    
-    // 다음 활동으로 이동 시 발문 숨기기
-    setShowPrompts(false);
   };
   
-  // 이전 활동으로 이동
+  // 이전 활동/단계로 이동
   const handlePrevious = () => {
     if (currentActivityIndex > 0) {
-      // 같은 스테이지 내 이전 활동으로 이동
+      // 현재 단계의 이전 활동으로 이동
       setCurrentActivityIndex(currentActivityIndex - 1);
     } else if (currentStageIndex > 0) {
-      // 이전 스테이지의 마지막 활동으로 이동
+      // 이전 단계의 마지막 활동으로 이동
       setCurrentStageIndex(currentStageIndex - 1);
-      const previousStage = getStagesAndActivities().stages[currentStageIndex - 1];
-      setCurrentActivityIndex(previousStage.activities.length - 1);
+      const prevStage = stages[currentStageIndex - 1];
+      setCurrentActivityIndex(prevStage.activities.length - 1);
     }
-    
-    // 이전 활동으로 이동 시 발문 숨기기
-    setShowPrompts(false);
   };
   
-  // 타이머 종료 처리
   const handleTimeEnd = () => {
-    alert('시간이 종료되었습니다.');
+    // 시간 종료 시 자동으로 다음 활동으로 이동할 수 있음
+    // 선택적으로 구현
   };
   
-  // 토론 종료 처리
   const handleEndDebate = () => {
     setIsDebateActive(false);
     router.push('/');
   };
-  
-  // 로딩 상태 표시
+
   if (loading) {
-    return <div className="container mx-auto p-6 text-center">로딩 중...</div>;
-  }
-  
-  // 시나리오가 없을 경우 (이제 DEFAULT_SCENARIO를 사용하므로 이 부분은 실행되지 않음)
-  if (!scenario) {
-    return <div className="container mx-auto p-6 text-center">시나리오를 찾을 수 없습니다.</div>;
-  }
-  
-  const { currentActivity, currentActiveStage } = getStagesAndActivities();
-  
-  if (!currentActivity || !currentActiveStage) {
-    return <div className="container mx-auto p-6 text-center">활동을 찾을 수 없습니다.</div>;
-  }
-  
-  // 스테이지 이름 매핑
-  const stageNames = ['1단계: 다름과 마주하기', '2단계: 다름을 이해하기', '3단계: 다름과 공존하기'];
-  
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-blue-700">{scenario?.title}</h1>
-          <button
-            onClick={handleEndDebate}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            토론 종료
-          </button>
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-lg">토론 세션을 준비 중입니다...</p>
         </div>
-        
-        <div className="flex flex-col min-h-screen bg-gray-50">
-          {/* 헤더 */}
-          <header className="bg-blue-700 text-white p-4">
-            <div className="container mx-auto flex justify-between items-center">
-              <h1 className="text-2xl font-bold">{scenario.title}</h1>
-              <Link href="/scenarios" className="text-white hover:underline">
-                종료
-              </Link>
-            </div>
-          </header>
+      </div>
+    );
+  }
+
+  // 나머지 렌더링 로직...
+  return (
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold text-gray-800">
+              {scenario?.title || '토론 세션'}
+            </h1>
+            <button
+              onClick={handleEndDebate}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              토론 종료
+            </button>
+          </div>
           
-          {/* 메인 콘텐츠 */}
-          <main className="flex-grow container mx-auto p-6">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              {/* 상단 진행 정보 */}
-              <div className="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b">
-                <div>
-                  <h2 className="text-xl font-semibold text-blue-700 mb-1">{stageNames[currentStageIndex]}</h2>
-                  <p className="text-gray-500">
-                    단계 {currentStageIndex + 1}/3 • 활동 {currentActivityIndex + 1}/{currentActiveStage.activities.length}
-                  </p>
+          {/* 단계 진행 상태 */}
+          <div className="mb-6">
+            <div className="flex justify-between mb-2">
+              {stages.map((stage, index) => (
+                <div 
+                  key={stage.id}
+                  className={`text-center flex-1 ${index < stages.length - 1 ? 'border-r border-gray-300' : ''} ${currentStageIndex === index ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}
+                >
+                  {stage.title}
                 </div>
-                
-                <Timer 
-                  initialMinutes={currentActivity.durationMinutes} 
-                  onTimeEnd={handleTimeEnd} 
-                />
+              ))}
+            </div>
+            <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full transition-all" 
+                style={{ 
+                  width: `${((currentStageIndex * 100) / stages.length) + 
+                    ((currentActivityIndex + 1) * 100) / (currentActiveStage?.activities.length || 1) / stages.length}%` 
+                }}
+              ></div>
+            </div>
+          </div>
+          
+          {/* 현재 활동 내용 */}
+          {currentActivity && (
+            <div className="bg-blue-50 p-5 rounded-lg mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                {currentActivity.title}
+              </h2>
+              <p className="text-gray-700 mb-4">{currentActivity.description}</p>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  소요 시간: {currentActivity.durationMinutes}분
+                </span>
+                <button
+                  onClick={() => setShowPrompts(!showPrompts)}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  {showPrompts ? '교사 안내 숨기기' : '교사 안내 보기'}
+                </button>
               </div>
               
-              {/* 활동 정보 */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-3">{currentActivity.title}</h3>
-                <p className="text-lg mb-4">{currentActivity.description}</p>
-                
-                {/* 교사 발문 토글 */}
-                <div className="mt-6">
-                  <button
-                    onClick={() => setShowPrompts(!showPrompts)}
-                    className="text-blue-600 hover:text-blue-800 flex items-center"
-                  >
-                    <span>{showPrompts ? '교사 발문 숨기기' : '교사 발문 보기'}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 ml-1">
-                      {showPrompts 
-                        ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      }
-                    </svg>
-                  </button>
-                  
-                  {showPrompts && (
-                    <div className="mt-3 p-4 bg-blue-50 rounded-md">
-                      <h4 className="font-semibold mb-2">발문 예시:</h4>
-                      <ul className="list-disc ml-5 space-y-1">
-                        {currentActivity.teacherPrompts.map((prompt, index) => (
-                          <li key={index}>{prompt}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+              {showPrompts && (
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <h3 className="text-md font-semibold text-gray-700 mb-2">교사 안내:</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {currentActivity.teacherPrompts.map((prompt, index) => (
+                      <li key={index} className="text-gray-700">{prompt}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
+              )}
             </div>
-            
-            {/* 이전/다음 버튼 */}
-            <div className="flex justify-between mt-6">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStageIndex === 0 && currentActivityIndex === 0}
-                className={`px-4 py-2 rounded-md ${
-                  currentStageIndex === 0 && currentActivityIndex === 0
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-600 text-white hover:bg-gray-700'
-                }`}
-              >
-                이전 활동
-              </button>
-              
-              <button
-                onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                다음 활동
-              </button>
-            </div>
-          </main>
+          )}
+          
+          {/* 타이머 */}
+          <div className="flex flex-col items-center mb-6 py-4 border-y border-gray-200">
+            <Timer 
+              initialMinutes={currentActivity?.durationMinutes || 10} 
+              onTimeEnd={handleTimeEnd}
+            />
+          </div>
+          
+          {/* 이전/다음 버튼 */}
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={handlePrevious}
+              disabled={currentStageIndex === 0 && currentActivityIndex === 0}
+              className={`px-4 py-2 rounded-md ${currentStageIndex === 0 && currentActivityIndex === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-500 hover:bg-gray-600'} text-white transition-colors`}
+            >
+              이전 활동
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={currentStageIndex === stages.length - 1 && currentActivityIndex === (currentActiveStage?.activities.length || 0) - 1}
+              className={`px-4 py-2 rounded-md ${currentStageIndex === stages.length - 1 && currentActivityIndex === (currentActiveStage?.activities.length || 0) - 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white transition-colors`}
+            >
+              다음 활동
+            </button>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-lg">토론 세션을 준비 중입니다...</p>
+        </div>
+      </div>
+    }>
+      <SessionContent />
+    </Suspense>
   );
 } 

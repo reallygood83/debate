@@ -3,9 +3,6 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import type { NextRequest } from 'next/server';
 import { getEnvVar } from '@/utils/envUtils';
 
-// API 키 검증
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
 // Google Gemini API 초기화 - 필요시 초기화 방식으로 변경
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -24,6 +21,13 @@ interface ScenarioData {
   expectedOutcomes: string[];
   materials?: string[];
   [key: string]: unknown;
+}
+
+// Gemini API 응답 타입
+interface GeminiResult {
+  response: {
+    text: () => string;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -142,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // 타임아웃 처리
     const resultPromise = chat.sendMessage(userPrompt);
-    const result = await Promise.race([resultPromise, timeoutPromise]) as any;
+    const result = await Promise.race([resultPromise, timeoutPromise]) as GeminiResult;
     const content = result.response.text();
     let scenarioData: ScenarioData;
     
@@ -174,7 +178,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-    } catch (err: unknown) {
+    } catch (parseError: unknown) {
       console.error('JSON 파싱 오류:', content);
       return NextResponse.json(
         { error: 'AI 응답을 파싱하는 중 오류가 발생했습니다.' },
@@ -188,10 +192,10 @@ export async function POST(request: NextRequest) {
       data: scenarioData
     });
     
-  } catch (err: unknown) {
-    console.error('시나리오 생성 오류:', err);
+  } catch (error: unknown) {
+    console.error('시나리오 생성 오류:', error);
     // 타임아웃 오류 특별 처리
-    if (err instanceof Error && err.message.includes('시간 초과')) {
+    if (error instanceof Error && error.message.includes('시간 초과')) {
       return NextResponse.json(
         { 
           error: 'AI 응답 생성에 시간이 너무 오래 걸립니다. 나중에 다시 시도해 주세요.',
@@ -200,7 +204,7 @@ export async function POST(request: NextRequest) {
         { status: 408 }
       );
     }
-    const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
       { 
         error: '시나리오 생성 중 오류가 발생했습니다.',
