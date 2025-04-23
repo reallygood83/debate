@@ -139,6 +139,30 @@ const exampleScenarios: Scenario[] = [
   }
 ];
 
+// 날짜 포맷 헬퍼 함수 추가
+const formatDate = (date: Date | string | undefined) => {
+  if (!date) return '날짜 없음';
+  
+  try {
+    // 문자열인 경우 Date 객체로 변환
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // 유효한 날짜인지 확인
+    if (isNaN(dateObj.getTime())) {
+      return '날짜 형식 오류';
+    }
+    
+    return dateObj.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch (error) {
+    console.error('날짜 포맷 오류:', error);
+    return '날짜 처리 오류';
+  }
+};
+
 export default function ScenarioDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -195,8 +219,8 @@ export default function ScenarioDetailPage() {
           topic: serverData.topic || '',
           grade: serverData.grade || '',
           subject: serverData.subject || '',
-          createdAt: new Date(serverData.createdAt),
-          updatedAt: new Date(serverData.updatedAt),
+          createdAt: serverData.createdAt,  // 날짜 문자열로 저장하고 렌더링 시 formatDate로 처리
+          updatedAt: serverData.updatedAt,
           totalDurationMinutes: serverData.totalDurationMinutes,
           stages: serverData.stages,
           details: {
@@ -340,9 +364,7 @@ export default function ScenarioDetailPage() {
               <div>
                 <div className="text-sm font-medium text-gray-500 mb-1">생성일</div>
                 <div className="text-gray-800">
-                  {typeof scenario.createdAt === 'string' 
-                    ? scenario.createdAt
-                    : scenario.createdAt.toLocaleDateString('ko-KR')}
+                  {formatDate(scenario.createdAt)}
                 </div>
               </div>
             </div>

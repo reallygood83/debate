@@ -48,6 +48,30 @@ const exampleScenarios: Scenario[] = [
   // 다른 시나리오들은 생략...
 ];
 
+// 날짜 포맷 헬퍼 함수 추가
+const formatDate = (date: Date | string | undefined) => {
+  if (!date) return '날짜 없음';
+  
+  try {
+    // 문자열인 경우 Date 객체로 변환
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // 유효한 날짜인지 확인
+    if (isNaN(dateObj.getTime())) {
+      return '날짜 형식 오류';
+    }
+    
+    return dateObj.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch (error) {
+    console.error('날짜 포맷 오류:', error);
+    return '날짜 처리 오류';
+  }
+};
+
 export default function ScenarioEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -156,8 +180,8 @@ export default function ScenarioEditPage() {
           topic: serverData.topic || '',
           grade: serverData.grade || '',
           subject: serverData.subject || '',
-          createdAt: new Date(serverData.createdAt),
-          updatedAt: new Date(serverData.updatedAt),
+          createdAt: serverData.createdAt, // 날짜 문자열 그대로 유지
+          updatedAt: serverData.updatedAt, // 날짜 문자열 그대로 유지
           totalDurationMinutes: serverData.totalDurationMinutes || 45,
           stages: serverData.stages || {
             stage1: { id: '1', title: '다름과 마주하기', activities: [] },
