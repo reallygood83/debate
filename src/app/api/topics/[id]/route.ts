@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/utils/db';
+import connectDB from '@/utils/db';
 import Topic from '@/models/Topic';
 
 // GET /api/topics/[id] - 특정 토론 주제 조회
