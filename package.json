@@ -34,6 +34,7 @@
   "dependencies": {
     "@google/generative-ai": "0.24.0",
     "@types/uuid": "^10.0.0",
+    "critters": "^0.0.23",
     "mongodb": "^6.16.0",
     "mongoose": "^8.13.2",
     "next": "^15.3.1",

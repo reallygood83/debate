@@ -212,4 +212,29 @@ function parseScenario(scenario: any): Scenario {
     createdAt: new Date(scenario.createdAt),
     updatedAt: new Date(scenario.updatedAt)
   };
+}
+
+// 하위 호환성을 위한 함수들 - 기존 코드를 위한 별칭
+export function saveScenario(scenario: Scenario): void {
+  // 로컬 스토리지와 가능한 경우 서버에 저장
+  saveScenarioLocally(scenario);
+  
+  // 서버에 저장 시도 (실패해도 로컬에는 저장됨)
+  if (typeof window !== 'undefined') {
+    saveScenarioToServer(scenario).catch(error => {
+      console.error('Failed to save scenario to server:', error);
+    });
+  }
+}
+
+export function deleteScenario(scenarioId: string): void {
+  // 로컬 스토리지에서 삭제
+  deleteScenarioLocally(scenarioId);
+  
+  // 서버에서 삭제 시도
+  if (typeof window !== 'undefined') {
+    deleteScenarioFromServer(scenarioId).catch(error => {
+      console.error('Failed to delete scenario from server:', error);
+    });
+  }
 } 

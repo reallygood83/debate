@@ -34,7 +34,7 @@ const nextConfig = {
   },
   // CDN 캐싱 최적화
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     scrollRestoration: true,
   },
   // 타임아웃 관련 설정
