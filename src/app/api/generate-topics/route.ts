@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import type { NextRequest } from 'next/server';
+import { getEnvVar } from '@/utils/envUtils';
 
-// Gemini API 키 (환경변수에서 가져오거나 여기에 직접 설정)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// Gemini 2.0 Flash 모델로 업데이트
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// Google Gemini API 초기화
+let genAI: GoogleGenerativeAI | null = null;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { prompt } = await request.json();
 
@@ -16,24 +17,35 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!GEMINI_API_KEY) {
-      console.error('Gemini API 키가 환경변수에 설정되어 있지 않습니다.');
-      return NextResponse.json(
-        { error: 'API 키가 설정되지 않았습니다. 서버 환경 변수에 GEMINI_API_KEY를 추가해주세요.' },
-        { status: 500 }
-      );
+    // 환경 변수 유틸리티 사용
+    const apiKey = getEnvVar('GEMINI_API_KEY', true);
+    
+    // API 키가 있을 때만 Gemini API 클라이언트 초기화
+    if (!genAI) {
+      genAI = new GoogleGenerativeAI(apiKey);
     }
-
-    // API 요청 데이터 구성
-    const requestData = {
-      contents: [
+    
+    // Gemini 모델 설정 - 시나리오 생성과 동일한 모델 사용
+    const modelName = "gemini-2.0-flash";
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      safetySettings: [
         {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
-        }
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
       ],
       generationConfig: {
         temperature: 0.7,
@@ -41,58 +53,42 @@ export async function POST(request: Request) {
         topP: 0.95,
         maxOutputTokens: 1024,
       },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
-      ]
-    };
-
-    console.log('Gemini API 요청 데이터:', JSON.stringify(requestData, null, 2));
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(e => ({ error: '오류 응답을 파싱할 수 없습니다' }));
-      console.error('Gemini API 오류 응답:', JSON.stringify(errorData, null, 2));
-      console.error('Gemini API 상태 코드:', response.status);
-      
-      return NextResponse.json(
-        { error: `Gemini API 오류: ${JSON.stringify(errorData)}` },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    console.log('Gemini API 응답:', JSON.stringify(data, null, 2));
+    console.log('Gemini API 요청 시작:', prompt.substring(0, 100) + '...');
     
-    // Gemini API 응답에서 텍스트 추출
-    const generatedText = data.candidates[0]?.content?.parts[0]?.text || '추천 주제를 생성할 수 없습니다.';
+    // API 호출에 타임아웃 적용
+    const timeoutMs = 25000; // 25초 타임아웃
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Gemini API 요청 시간 초과')), timeoutMs);
+    });
+
+    // Gemini API 호출
+    const resultPromise = model.generateContent(prompt);
+    const result = await Promise.race([resultPromise, timeoutPromise]);
+    const response = result.response;
+    const generatedText = response.text();
+
+    console.log('Gemini API 응답 생성 완료');
 
     return NextResponse.json({ response: generatedText });
   } catch (error) {
     console.error('서버 오류:', error);
+    
+    // 타임아웃 오류 특별 처리
+    if (error instanceof Error && error.message.includes('시간 초과')) {
+      return NextResponse.json(
+        { 
+          error: 'AI 응답 생성에 시간이 너무 오래 걸립니다. 나중에 다시 시도해 주세요.',
+          details: '요청 시간 초과' 
+        },
+        { status: 408 }
+      );
+    }
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: `서버 오류가 발생했습니다: ${error instanceof Error ? error.message : String(error)}` },
+      { error: `서버 오류가 발생했습니다: ${errorMessage}` },
       { status: 500 }
     );
   }
