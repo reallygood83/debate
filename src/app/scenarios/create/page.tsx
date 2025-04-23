@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScenarioFormData } from '@/types/scenario';
 import { createNewScenario, saveScenario } from '@/utils/scenarioUtils';
@@ -65,6 +65,21 @@ export default function CreateScenarioPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiGenerationStatus, setAiGenerationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [saveToServer, setSaveToServer] = useState(false);
+  
+  // URL 쿼리에서 주제 가져오기
+  useEffect(() => {
+    // URLSearchParams를 사용하여 쿼리 파라미터 가져오기
+    const queryParams = new URLSearchParams(window.location.search);
+    const topicFromQuery = queryParams.get('topic');
+    
+    if (topicFromQuery) {
+      setFormData(prev => ({
+        ...prev,
+        title: topicFromQuery,
+        topic: topicFromQuery
+      }));
+    }
+  }, []);
   
   // 입력값 변경 처리
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
