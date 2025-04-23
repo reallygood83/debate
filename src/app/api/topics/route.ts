@@ -1,44 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/utils/db';
-import Topic from '@/models/Topic';
+import { getCollection } from '@/utils/mongodb';
+import { ObjectId } from 'mongodb';
 
-// GET /api/topics - 모든 토론 주제 조회
+// 토론 주제 생성 API
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    // 필수 필드 검증
+    const requiredFields = ['title', 'background', 'grade', 'proArguments', 'conArguments', 'teacherTips', 'keyQuestions', 'expectedOutcomes', 'subjects'];
+    const missingFields = requiredFields.filter(field => !body[field]);
+    
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        { message: `다음 필드가 필요합니다: ${missingFields.join(', ')}` }, 
+        { status: 400 }
+      );
+    }
+    
+    // 배열 필드 검증
+    const arrayFields = ['proArguments', 'conArguments', 'keyQuestions', 'expectedOutcomes', 'subjects'];
+    for (const field of arrayFields) {
+      if (!Array.isArray(body[field]) || body[field].length === 0) {
+        return NextResponse.json(
+          { message: `${field}에는 최소 하나 이상의 항목이 필요합니다.` }, 
+          { status: 400 }
+        );
+      }
+    }
+    
+    // MongoDB 컬렉션 가져오기
+    const collection = await getCollection('topics');
+    
+    // 새 토론 주제 생성
+    const topic = {
+      title: body.title,
+      grade: body.grade,
+      background: body.background,
+      proArguments: body.proArguments,
+      conArguments: body.conArguments,
+      teacherTips: body.teacherTips,
+      keyQuestions: body.keyQuestions,
+      expectedOutcomes: body.expectedOutcomes,
+      subjects: body.subjects,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      useCount: 0
+    };
+    
+    const result = await collection.insertOne(topic);
+    
+    // 결과 반환
+    return NextResponse.json({ 
+      ...topic, 
+      _id: result.insertedId 
+    }, { status: 201 });
+    
+  } catch (error) {
+    console.error('토론 주제 생성 오류:', error);
+    return NextResponse.json(
+      { message: '토론 주제를 생성하는 중 오류가 발생했습니다.' }, 
+      { status: 500 }
+    );
+  }
+}
+
+// 토론 주제 목록 조회 API
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
-    
-    // MongoDB URI가 없거나 연결에 실패했을 경우 빈 목록 반환
-    if (!process.env.MONGODB_URI) {
-      console.warn('MongoDB URI가 설정되지 않았습니다. 더미 데이터를 반환합니다.');
-      return NextResponse.json({
-        topics: [],
-        pagination: {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 0
-        }
-      });
-    }
-    
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
+    // 쿼리 파라미터
+    const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const query = searchParams.get('q') || '';
+    const subject = searchParams.get('subject') || '';
     
+    // 페이지네이션 계산
     const skip = (page - 1) * limit;
     
-    let filter = {};
+    // MongoDB 컬렉션 가져오기
+    const collection = await getCollection('topics');
+    
+    // 검색 쿼리 구성
+    const filter: any = {};
+    
     if (query) {
-      filter = { $text: { $search: query } };
+      filter.$or = [
+        { title: { $regex: query, $options: 'i' } },
+        { background: { $regex: query, $options: 'i' } }
+      ];
     }
     
-    const topics = await Topic.find(filter)
+    if (subject && subject !== 'all') {
+      filter.subjects = { $in: [subject] };
+    }
+    
+    // 토픽 가져오기
+    const topics = await collection
+      .find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
-      
-    const total = await Topic.countDocuments(filter);
+      .limit(limit)
+      .toArray();
+    
+    // 전체 토픽 수 조회
+    const total = await collection.countDocuments(filter);
+    
+    // 페이지네이션 정보 추가
+    const totalPages = Math.ceil(total / limit);
     
     return NextResponse.json({
       topics,
@@ -46,69 +115,14 @@ export async function GET(request: NextRequest) {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
+        totalPages
       }
     });
-  } catch (error: any) {
-    console.error('토론 주제 조회 중 오류 발생:', error);
+    
+  } catch (error) {
+    console.error('토론 주제 조회 오류:', error);
     return NextResponse.json(
-      { error: '토론 주제를 조회하는 중 오류가 발생했습니다.' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST /api/topics - 새로운 토론 주제 생성
-export async function POST(request: NextRequest) {
-  try {
-    await connectDB();
-    
-    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json(
-        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 저장할 수 없습니다.' },
-        { status: 503 }
-      );
-    }
-    
-    const body = await request.json();
-    
-    // 필수 필드 검증
-    const requiredFields = [
-      'title',
-      'background',
-      'proArguments',
-      'conArguments',
-      'teacherTips',
-      'keyQuestions',
-      'expectedOutcomes',
-      'subjects'
-    ];
-    
-    const missingFields = requiredFields.filter(field => !body[field]);
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { error: `다음 필드가 누락되었습니다: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // 배열 필드의 최소 길이 검증
-    const arrayFields = ['proArguments', 'conArguments', 'keyQuestions', 'expectedOutcomes', 'subjects'];
-    const emptyArrays = arrayFields.filter(field => !Array.isArray(body[field]) || body[field].length === 0);
-    if (emptyArrays.length > 0) {
-      return NextResponse.json(
-        { error: `다음 필드는 최소 1개 이상의 항목이 필요합니다: ${emptyArrays.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    const topic = await Topic.create(body);
-    return NextResponse.json(topic, { status: 201 });
-  } catch (error: any) {
-    console.error('토론 주제 생성 중 오류 발생:', error);
-    return NextResponse.json(
-      { error: '토론 주제를 생성하는 중 오류가 발생했습니다.' },
+      { message: '토론 주제를 조회하는 중 오류가 발생했습니다.' }, 
       { status: 500 }
     );
   }

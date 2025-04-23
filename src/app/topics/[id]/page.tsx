@@ -1,14 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, Trash2, ArrowLeftCircle, Play, Copy } from 'lucide-react';
+import { ArrowLeftIcon, DocumentDuplicateIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 
+// 토론 주제 타입 정의
 interface Topic {
   _id: string;
   title: string;
   grade: string;
-  author: string;
   background: string;
   proArguments: string[];
   conArguments: string[];
@@ -18,179 +49,262 @@ interface Topic {
   subjects: string[];
   createdAt: string;
   updatedAt: string;
+  useCount: number;
 }
 
-export default function TopicDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [topic, setTopic] = useState<Topic | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// 학년 옵션 맵
+const gradeMap: Record<string, string> = {
+  '초등_저학년': '초등 저학년',
+  '초등_고학년': '초등 고학년',
+  '중등': '중학교',
+  '고등': '고등학교'
+};
 
+export default function TopicDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+  
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  // 토론 주제 불러오기
   useEffect(() => {
     const fetchTopic = async () => {
       try {
-        const response = await fetch(`/api/topics/${params.id}`);
+        setLoading(true);
+        const response = await fetch(`/api/topics/${id}`);
+        
         if (!response.ok) {
-          throw new Error('토론 주제를 불러오는데 실패했습니다.');
+          throw new Error('주제를 불러오는데 실패했습니다.');
         }
+        
         const data = await response.json();
-        setTopic(data.topic);
-      } catch (error: any) {
-        setError(error.message);
+        setTopic(data);
+      } catch (err) {
+        setError('주제를 불러오는 중 오류가 발생했습니다.');
+        console.error(err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchTopic();
-  }, [params.id]);
+    if (id) {
+      fetchTopic();
+    }
+  }, [id]);
 
-  if (isLoading) {
+  // 토론 주제 삭제
+  const deleteTopic = async () => {
+    try {
+      const response = await fetch(`/api/topics/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '토론 주제를 삭제하는 중 오류가 발생했습니다.');
+      }
+      
+      router.push('/topics/list');
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  // 텍스트 복사 함수
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  // 토론 시작 함수
+  const startDebateWithTopic = () => {
+    if (topic) {
+      // 토론 시작 페이지로 이동하면서 현재 주제 정보 전달
+      router.push(`/session?topic=${encodeURIComponent(topic.title)}`);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !topic) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
-          <p className="font-bold">오류</p>
-          <p>{error}</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+          <p className="text-red-700">{error || '주제를 찾을 수 없습니다.'}</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!topic) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative">
-          <p>토론 주제를 찾을 수 없습니다.</p>
-        </div>
+        <Link href="/topics" className="text-blue-500 hover:underline flex items-center">
+          <ArrowLeftIcon className="h-4 w-4 mr-1" /> 주제 목록으로 돌아가기
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link href="/topics" className="text-blue-500 hover:text-blue-700">
-          ← 토론 주제 목록으로 돌아가기
+        <Link href="/topics" className="text-blue-500 hover:underline flex items-center">
+          <ArrowLeftIcon className="h-4 w-4 mr-1" /> 주제 목록으로 돌아가기
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md">
-        {/* 헤더 섹션 */}
-        <div className="p-6 border-b">
-          <h1 className="text-3xl font-bold mb-4">{topic.title}</h1>
-          <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-            <div>대상: {topic.grade}</div>
-            <div>작성자: {topic.author || '미상'}</div>
-            <div>작성일: {new Date(topic.createdAt).toLocaleDateString('ko-KR')}</div>
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <h1 className="text-3xl font-bold text-gray-800">{topic.title}</h1>
+            <div className="flex space-x-2">
+              <button
+                onClick={startDebateWithTopic}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <BookOpenIcon className="h-5 w-5 inline mr-1" />
+                이 주제로 토론 시작
+              </button>
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          
+          <div className="flex flex-wrap gap-2 mb-4">
             {topic.subjects.map((subject, index) => (
-              <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+              <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
                 {subject}
               </span>
             ))}
           </div>
-        </div>
 
-        <div className="p-6 space-y-8">
-          {/* 배경 섹션 */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">배경</h2>
-            <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">배경 정보</h2>
+              <button 
+                onClick={() => copyToClipboard(topic.background, 'background')}
+                className="text-gray-500 hover:text-gray-700"
+                title="클립보드에 복사"
+              >
+                <DocumentDuplicateIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {copied === 'background' && (
+              <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+            )}
+            <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
               {topic.background}
             </div>
-          </section>
+          </div>
 
-          {/* 찬성/반대 논점 섹션 */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">주요 논점</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 찬성 논점 */}
-              <div className="bg-green-50 border border-green-100 rounded-lg p-4">
-                <h3 className="text-lg font-medium text-green-800 mb-3">찬성 측 논점</h3>
-                <ul className="space-y-2">
-                  {topic.proArguments.map((arg, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-500 mr-2">•</span>
-                      {arg}
-                    </li>
-                  ))}
-                </ul>
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">찬성 측 논거</h2>
+                <button 
+                  onClick={() => copyToClipboard(topic.proArguments.join('\n\n'), 'pro')}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="클립보드에 복사"
+                >
+                  <DocumentDuplicateIcon className="h-5 w-5" />
+                </button>
               </div>
-
-              {/* 반대 논점 */}
-              <div className="bg-red-50 border border-red-100 rounded-lg p-4">
-                <h3 className="text-lg font-medium text-red-800 mb-3">반대 측 논점</h3>
-                <ul className="space-y-2">
-                  {topic.conArguments.map((arg, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-500 mr-2">•</span>
-                      {arg}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {copied === 'pro' && (
+                <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+              )}
+              <ul className="bg-green-50 p-4 rounded-md list-disc pl-5">
+                {topic.proArguments.map((arg, index) => (
+                  <li key={index} className="mb-2">{arg}</li>
+                ))}
+              </ul>
             </div>
-          </section>
+            
+            <div>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">반대 측 논거</h2>
+                <button 
+                  onClick={() => copyToClipboard(topic.conArguments.join('\n\n'), 'con')}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="클립보드에 복사"
+                >
+                  <DocumentDuplicateIcon className="h-5 w-5" />
+                </button>
+              </div>
+              {copied === 'con' && (
+                <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+              )}
+              <ul className="bg-red-50 p-4 rounded-md list-disc pl-5">
+                {topic.conArguments.map((arg, index) => (
+                  <li key={index} className="mb-2">{arg}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
 
-          {/* 교사용 팁 섹션 */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">교사용 팁</h2>
-            <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 whitespace-pre-wrap">
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">교사 지도 팁</h2>
+              <button 
+                onClick={() => copyToClipboard(topic.teacherTips, 'tips')}
+                className="text-gray-500 hover:text-gray-700"
+                title="클립보드에 복사"
+              >
+                <DocumentDuplicateIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {copied === 'tips' && (
+              <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+            )}
+            <div className="bg-yellow-50 p-4 rounded-md whitespace-pre-wrap">
               {topic.teacherTips}
             </div>
-          </section>
+          </div>
 
-          {/* 핵심 질문 섹션 */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">핵심 질문</h2>
-            <ul className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-2">
-              {topic.keyQuestions.map((question, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-blue-500 mr-2">Q.</span>
-                  {question}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* 기대 성과 섹션 */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">기대 성과</h2>
-            <ul className="bg-purple-50 border border-purple-100 rounded-lg p-4 space-y-2">
-              {topic.expectedOutcomes.map((outcome, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-purple-500 mr-2">•</span>
-                  {outcome}
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-
-        {/* 하단 버튼 */}
-        <div className="p-6 border-t bg-gray-50">
-          <div className="flex justify-end gap-4">
-            <Link
-              href={`/topics/${topic._id}/edit`}
-              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded"
-            >
-              수정하기
-            </Link>
-            <Link
-              href={`/session?topicId=${topic._id}`}
-              className="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded"
-            >
-              토론 시작하기
-            </Link>
+          <div className="grid md:grid-cols-2 gap-6 mb-4">
+            <div>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">핵심 질문</h2>
+                <button 
+                  onClick={() => copyToClipboard(topic.keyQuestions.join('\n\n'), 'questions')}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="클립보드에 복사"
+                >
+                  <DocumentDuplicateIcon className="h-5 w-5" />
+                </button>
+              </div>
+              {copied === 'questions' && (
+                <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+              )}
+              <ul className="bg-purple-50 p-4 rounded-md list-disc pl-5">
+                {topic.keyQuestions.map((question, index) => (
+                  <li key={index} className="mb-2">{question}</li>
+                ))}
+              </ul>
+            </div>
+            
+            <div>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">기대 학습 성과</h2>
+                <button 
+                  onClick={() => copyToClipboard(topic.expectedOutcomes.join('\n\n'), 'outcomes')}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="클립보드에 복사"
+                >
+                  <DocumentDuplicateIcon className="h-5 w-5" />
+                </button>
+              </div>
+              {copied === 'outcomes' && (
+                <div className="text-green-600 text-sm mb-2">복사되었습니다!</div>
+              )}
+              <ul className="bg-blue-50 p-4 rounded-md list-disc pl-5">
+                {topic.expectedOutcomes.map((outcome, index) => (
+                  <li key={index} className="mb-2">{outcome}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

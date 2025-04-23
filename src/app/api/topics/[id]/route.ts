@@ -1,112 +1,160 @@
-import { NextResponse } from 'next/server';
-import connectDB from '@/utils/db';
-import Topic from '@/models/Topic';
+import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
+import { getCollection } from '@/utils/mongodb';
 
-// GET /api/topics/[id] - 특정 토론 주제 조회
+/**
+ * GET 요청 처리: ID로 토론 주제 조회
+ * @param request NextRequest 객체
+ * @param context 라우트 파라미터가 포함된 객체 (id)
+ */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
+    const id = params.id;
     
-    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
-    if (!process.env.MONGODB_URI) {
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 조회할 수 없습니다.' },
-        { status: 503 }
+        { message: '유효하지 않은 주제 ID입니다.' },
+        { status: 400 }
       );
     }
     
-    const topic = await Topic.findById(params.id);
-    
+    const collection = await getCollection('topics');
+    const topic = await collection.findOne({ _id: new ObjectId(id) });
+
     if (!topic) {
       return NextResponse.json(
-        { error: '해당 토론 주제를 찾을 수 없습니다.' },
+        { message: '주제를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-
-    return NextResponse.json({ topic });
+    
+    return NextResponse.json(topic);
   } catch (error) {
-    console.error('토론 주제 조회 중 오류 발생:', error);
+    console.error('Error fetching topic:', error);
     return NextResponse.json(
-      { error: '토론 주제를 조회하는 중 오류가 발생했습니다.' },
+      { message: '주제를 조회하는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/topics/[id] - 토론 주제 수정
+/**
+ * PUT 요청 처리: ID로 토론 주제 업데이트
+ * @param request NextRequest 객체
+ * @param context 라우트 파라미터가 포함된 객체 (id)
+ */
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await request.json();
-    await connectDB();
+    const id = params.id;
     
-    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
-    if (!process.env.MONGODB_URI) {
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 수정할 수 없습니다.' },
-        { status: 503 }
+        { message: '유효하지 않은 주제 ID입니다.' },
+        { status: 400 }
       );
     }
     
-    const topic = await Topic.findByIdAndUpdate(
-      params.id,
-      { ...body, updatedAt: new Date() },
-      { new: true, runValidators: true }
+    const body = await request.json();
+    
+    // 필수 필드 검증
+    if (!body.title || !body.background) {
+      return NextResponse.json(
+        { message: '제목과 배경 정보는 필수 항목입니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(body.proArguments) || body.proArguments.length === 0) {
+      return NextResponse.json(
+        { message: '최소 하나 이상의 찬성 논거가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(body.conArguments) || body.conArguments.length === 0) {
+      return NextResponse.json(
+        { message: '최소 하나 이상의 반대 논거가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+    
+    const collection = await getCollection('topics');
+    
+    // 업데이트 시간 추가
+    const updateData = {
+      ...body,
+      updatedAt: new Date().toISOString()
+    };
+    
+    delete updateData._id; // _id는 업데이트할 수 없음
+    
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
     );
 
-    if (!topic) {
+    if (result.matchedCount === 0) {
       return NextResponse.json(
-        { error: '해당 토론 주제를 찾을 수 없습니다.' },
+        { message: '수정할 주제를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-
-    return NextResponse.json({ topic });
+    
+    const updatedTopic = await collection.findOne({ _id: new ObjectId(id) });
+    
+    return NextResponse.json(updatedTopic);
   } catch (error) {
-    console.error('토론 주제 수정 중 오류 발생:', error);
+    console.error('Error updating topic:', error);
     return NextResponse.json(
-      { error: '토론 주제를 수정하는 중 오류가 발생했습니다.' },
+      { message: '주제를 업데이트하는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/topics/[id] - 토론 주제 삭제
+/**
+ * DELETE 요청 처리: ID로 토론 주제 삭제
+ * @param request NextRequest 객체
+ * @param context 라우트 파라미터가 포함된 객체 (id)
+ */
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
+    const id = params.id;
     
-    // MongoDB URI가 없거나 연결에 실패했을 경우 오류 반환
-    if (!process.env.MONGODB_URI) {
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: 'MongoDB URI가 설정되지 않았습니다. 토론 주제를 삭제할 수 없습니다.' },
-        { status: 503 }
+        { message: '유효하지 않은 주제 ID입니다.' },
+        { status: 400 }
       );
     }
     
-    const topic = await Topic.findByIdAndDelete(params.id);
+    const collection = await getCollection('topics');
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
 
-    if (!topic) {
+    if (result.deletedCount === 0) {
       return NextResponse.json(
-        { error: '해당 토론 주제를 찾을 수 없습니다.' },
+        { message: '삭제할 주제를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-
-    return NextResponse.json({ message: '토론 주제가 성공적으로 삭제되었습니다.' });
-  } catch (error) {
-    console.error('토론 주제 삭제 중 오류 발생:', error);
+    
     return NextResponse.json(
-      { error: '토론 주제를 삭제하는 중 오류가 발생했습니다.' },
+      { message: '주제가 성공적으로 삭제되었습니다.' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error deleting topic:', error);
+    return NextResponse.json(
+      { message: '주제를 삭제하는 중 오류가 발생했습니다.' },
       { status: 500 }
     );
   }
