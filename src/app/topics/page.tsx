@@ -1,8 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CopyIcon, CheckIcon } from '@radix-ui/react-icons';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+
+// 샘플 토론 주제 데이터
+const sampleTopics = [
+  {
+    id: '1',
+    title: '우리나라를 지키기 위한 전쟁, 어떤 경우에도 정당화될 수 있을까?',
+    subject: ['도덕', '사회'],
+    grade: '초등학교 고학년(4-6학년)',
+    createdAt: '2025년 4월 24일'
+  },
+  {
+    id: '2',
+    title: '인공지능 기술의 발전은 교육에 더 많은 도움이 될까, 해가 될까?',
+    subject: ['도덕', '실과'],
+    grade: '초등학교 고학년(4-6학년)',
+    createdAt: '2025년 4월 23일'
+  },
+  {
+    id: '3',
+    title: '학교에서 스마트폰 사용을 전면 금지해야 할까?',
+    subject: ['사회', '도덕'],
+    grade: '초등학교 고학년(4-6학년)',
+    createdAt: '2025년 4월 22일'
+  }
+];
 
 export default function TopicsPage() {
   const [gradeGroup, setGradeGroup] = useState<string>('');
@@ -15,6 +41,12 @@ export default function TopicsPage() {
     visible: false,
     title: '',
   });
+  const [topics, setTopics] = useState(sampleTopics);
+
+  useEffect(() => {
+    // 실제로는 API에서 토론 주제 목록을 가져오는 로직이 필요
+    // 현재는 샘플 데이터 사용
+  }, []);
 
   const showToast = (title: string, description?: string) => {
     setToastMessage({
@@ -123,101 +155,162 @@ ${keywords ? `키워드: ${keywords}` : ''}
     }, 2000);
   };
 
+  const handleSaveToScenario = (recommendation: string) => {
+    // 여기서 시나리오 생성 페이지로 이동하거나 API 호출을 통해 시나리오를 저장할 수 있습니다
+    showToast('시나리오로 저장 중...', recommendation);
+    // 예: router.push(`/scenarios/create?topic=${encodeURIComponent(recommendation)}`);
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8 text-center">AI 토론 주제 추천</h1>
-      
-      <div className="bg-white rounded-lg shadow-md mb-8 p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold mb-2">토론 주제 추천 받기</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">토론 주제</h1>
+        <Link href="/topics/create" className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+          새 토론 주제 만들기
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-lg shadow-md mb-8 p-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold mb-2">AI 토론 주제 추천</h2>
+              <p className="text-gray-600 text-sm mb-4">
+                학년군과 주제 분야를 입력하여 AI가 추천하는 토론 주제를 확인해보세요.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="grade-group" className="block text-sm font-medium">학년군 선택</label>
+                <select
+                  id="grade-group"
+                  value={gradeGroup}
+                  onChange={(e) => setGradeGroup(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">학년군을 선택하세요</option>
+                  <option value="초등학교 저학년(1-3학년)">초등학교 저학년(1-3학년)</option>
+                  <option value="초등학교 고학년(4-6학년)">초등학교 고학년(4-6학년)</option>
+                  <option value="중학교(1-3학년)">중학교(1-3학년)</option>
+                  <option value="고등학교(1-3학년)">고등학교(1-3학년)</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="topic" className="block text-sm font-medium">주제 분야</label>
+                <input
+                  id="topic"
+                  type="text"
+                  placeholder="예: 환경, 과학기술, 사회문제, 교육 등"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="keywords" className="block text-sm font-medium">키워드 (선택사항)</label>
+                <textarea
+                  id="keywords"
+                  placeholder="관련 키워드를 입력하세요 (쉼표로 구분)"
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                />
+              </div>
+              
+              <button 
+                onClick={handleRecommend} 
+                disabled={isLoading}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="inline mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    추천 중...
+                  </>
+                ) : '토론 주제 추천받기'}
+              </button>
+            </div>
+          </div>
+
+          {recommendations.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold">추천 토론 주제</h2>
+              </div>
+              <div className="space-y-4">
+                {recommendations.map((recommendation, index) => (
+                  <div key={index} className="border rounded-md p-4">
+                    <p className="text-lg mb-3">{recommendation}</p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleCopy(recommendation, index)}
+                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-2 rounded flex items-center"
+                      >
+                        {copiedIndex === index ? (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            복사됨
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            복사
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleSaveToScenario(recommendation)}
+                        className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-2 rounded flex items-center"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        시나리오로 저장
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="grade-group" className="block text-sm font-medium">학년군 선택</label>
-            <select
-              id="grade-group"
-              value={gradeGroup}
-              onChange={(e) => setGradeGroup(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">학년군을 선택하세요</option>
-              <option value="초등학교 저학년(1-3학년)">초등학교 저학년(1-3학년)</option>
-              <option value="초등학교 고학년(4-6학년)">초등학교 고학년(4-6학년)</option>
-              <option value="중학교(1-3학년)">중학교(1-3학년)</option>
-              <option value="고등학교(1-3학년)">고등학교(1-3학년)</option>
-            </select>
+
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">토론 주제 목록</h2>
+            <div className="space-y-4">
+              {topics.map((t) => (
+                <div key={t.id} className="border rounded-md p-4 hover:bg-gray-50 transition-colors">
+                  <Link href={`/topics/${t.id}`} className="block">
+                    <h3 className="text-lg font-medium text-blue-700 hover:text-blue-800 mb-2">{t.title}</h3>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {t.subject.map((s, idx) => (
+                        <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          {s}
+                        </span>
+                      ))}
+                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                        {t.grade}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">{t.createdAt}</p>
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="topic" className="block text-sm font-medium">주제 분야</label>
-            <input
-              id="topic"
-              type="text"
-              placeholder="예: 환경, 과학기술, 사회문제, 교육 등"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="keywords" className="block text-sm font-medium">키워드 (선택사항)</label>
-            <textarea
-              id="keywords"
-              placeholder="관련 키워드를 입력하세요 (쉼표로 구분)"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-            />
-          </div>
-          
-          <button 
-            onClick={handleRecommend} 
-            disabled={isLoading}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <svg className="inline mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                추천 중...
-              </>
-            ) : '토론 주제 추천받기'}
-          </button>
         </div>
       </div>
-      
-      {recommendations.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold">추천 토론 주제</h2>
-          </div>
-          <div className="space-y-4">
-            {recommendations.map((recommendation, index) => (
-              <div key={index} className="flex items-start justify-between p-4 border rounded-md">
-                <p className="text-lg flex-grow">{recommendation}</p>
-                <button
-                  onClick={() => handleCopy(recommendation, index)}
-                  className="ml-2 p-2 text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md"
-                >
-                  {copiedIndex === index ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
+
       {/* Toast 메시지 */}
       {toastMessage.visible && (
         <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg max-w-xs z-50">
