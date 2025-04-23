@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 // Gemini API 키 (환경변수에서 가져오거나 여기에 직접 설정)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+// Gemini 2.0 Flash 모델로 업데이트
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 export async function POST(request: Request) {
   try {
