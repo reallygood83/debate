@@ -215,16 +215,32 @@ function parseScenario(scenario: any): Scenario {
 }
 
 // 하위 호환성을 위한 함수들 - 기존 코드를 위한 별칭
-export function saveScenario(scenario: Scenario): void {
-  // 로컬 스토리지와 가능한 경우 서버에 저장
-  saveScenarioLocally(scenario);
+export async function saveScenario(scenario: Scenario): Promise<{ localSuccess: boolean; serverSuccess: boolean }> {
+  let localSuccess = false;
+  let serverSuccess = false;
+  
+  try {
+    // 로컬 스토리지에 저장
+    saveScenarioLocally(scenario);
+    localSuccess = true;
+    console.log('시나리오를 로컬에 저장했습니다: ', scenario.title);
+  } catch (localError) {
+    console.error('로컬 저장 실패:', localError);
+  }
   
   // 서버에 저장 시도 (실패해도 로컬에는 저장됨)
   if (typeof window !== 'undefined') {
-    saveScenarioToServer(scenario).catch(error => {
-      console.error('Failed to save scenario to server:', error);
-    });
+    try {
+      const savedScenario = await saveScenarioToServer(scenario);
+      serverSuccess = true;
+      console.log('시나리오를 서버에 저장했습니다: ', savedScenario.title);
+    } catch (serverError) {
+      console.error('서버 저장 실패:', serverError);
+      // 서버 저장이 실패해도 오류를 던지지 않고 결과만 반환
+    }
   }
+  
+  return { localSuccess, serverSuccess };
 }
 
 export function deleteScenario(scenarioId: string): void {

@@ -345,6 +345,16 @@ export default function ScenariosPage() {
         </Link>
       </div>
       
+      {/* 데이터 소스 설명 */}
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+        <p className="text-blue-800">
+          <span className="font-bold">내 토론자료</span>: 내 브라우저에 로컬로 저장된 시나리오입니다. 다른 기기에서는 보이지 않습니다.
+        </p>
+        <p className="text-blue-800 mt-2">
+          <span className="font-bold">공유 토론자료</span>: 서버에 저장된 모든 시나리오로, 다른 사용자가 만든 자료도 포함됩니다. 내가 만든 자료도 '저장' 시 서버에 저장됩니다.
+        </p>
+      </div>
+      
       {/* 데이터 소스 전환 버튼 */}
       <div className="mb-6 flex items-center">
         <div className="rounded-md bg-gray-200 p-1 flex">
@@ -357,7 +367,7 @@ export default function ScenariosPage() {
             }}
             className="px-4 py-2 rounded-md font-medium text-blue-800 hover:bg-blue-50 transition-colors"
           >
-            내 토론자료
+            내 로컬 토론자료
           </button>
           <button
             onClick={() => {
@@ -376,7 +386,7 @@ export default function ScenariosPage() {
                 </svg>
                 로딩 중...
               </span>
-            ) : '공유 토론자료'}
+            ) : '서버 공유 토론자료'}
           </button>
         </div>
         

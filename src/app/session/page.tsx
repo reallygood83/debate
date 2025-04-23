@@ -201,8 +201,12 @@ function SessionContent() {
     const currentActiveStage = stagesArray[currentStageIndex];
     
     // 현재 활동
-    const currentActivity = currentActiveStage?.activities[currentActivityIndex] || null;
-    
+    const currentActivity = currentActiveStage && 
+                           currentActiveStage.activities && 
+                           currentActiveStage.activities.length > currentActivityIndex
+      ? currentActiveStage.activities[currentActivityIndex] 
+      : null;
+      
     return { stages: stagesArray, currentActivity, currentActiveStage };
   }, [scenario, currentStageIndex, currentActivityIndex]);
   
@@ -210,43 +214,49 @@ function SessionContent() {
   useEffect(() => {
     async function loadScenario() {
       try {
-        if (scenarioId) {
-          // ID로 시나리오 로드
-          const data = await getScenarioById(scenarioId);
-          if (data && data.success) {
-            setScenario(data.data);
-            // 토론 활성화 및 주제 설정
-            setIsDebateActive(true);
-            setActiveTopic(data.data.title || '기본 토론 주제');
-          } else {
-            // 오류 시 기본 시나리오 사용
-            setScenario(DEFAULT_SCENARIO);
-            setIsDebateActive(true);
-            setActiveTopic(DEFAULT_SCENARIO.title);
-          }
-        } else {
-          // ID 없으면 기본 시나리오 사용
+        setLoading(true);
+        
+        // scenarioId가 없는 경우, 기본 시나리오 사용
+        if (!scenarioId) {
           setScenario(DEFAULT_SCENARIO);
-          setIsDebateActive(true);
           setActiveTopic(DEFAULT_SCENARIO.title);
+          setIsDebateActive(true);
+          setLoading(false);
+          return;
         }
+        
+        const result = await getScenarioById(scenarioId);
+        
+        if (!result.success || !result.data) {
+          console.error('시나리오를 찾을 수 없습니다. 기본 시나리오를 사용합니다.');
+          setScenario(DEFAULT_SCENARIO);
+          setActiveTopic(DEFAULT_SCENARIO.title);
+        } else {
+          const loadedScenario = result.data;
+          setScenario(loadedScenario);
+          
+          // 토론 주제 설정
+          if (loadedScenario.topic) {
+            setActiveTopic(loadedScenario.topic);
+          } else {
+            setActiveTopic(loadedScenario.title);
+          }
+        }
+        
+        // 토론 활성화 상태 설정
+        setIsDebateActive(true);
       } catch (error) {
-        console.error("시나리오 로드 오류:", error);
+        console.error('시나리오 로드 오류:', error);
         // 오류 발생 시 기본 시나리오 사용
         setScenario(DEFAULT_SCENARIO);
-        setIsDebateActive(true);
         setActiveTopic(DEFAULT_SCENARIO.title);
+        setIsDebateActive(true);
       } finally {
         setLoading(false);
       }
     }
     
     loadScenario();
-    
-    // 컴포넌트 언마운트 시 토론 비활성화
-    return () => {
-      setIsDebateActive(false);
-    };
   }, [scenarioId, setActiveTopic, setIsDebateActive]);
   
   const { stages, currentActivity, currentActiveStage } = getStagesAndActivities();
