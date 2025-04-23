@@ -230,8 +230,22 @@ export default function ScenariosPage() {
     
     loadScenarios();
     
-    // 페이지 로드 시 서버 데이터 자동 로드 (필요에 따라 주석 처리 가능)
+    // 페이지 로드 시 서버 데이터 자동 로드
     loadServerScenarios();
+    
+    // 로딩 상태가 30초 이상 지속되면 자동 취소
+    const timeoutId = setTimeout(() => {
+      if (serverDataLoading) {
+        console.log('서버 데이터 로딩 타임아웃: 자동 취소');
+        setServerDataLoading(false);
+        setError('서버 연결 시간이 너무 오래 걸립니다. 내 토론자료로 전환합니다.');
+        setShowServerData(false);
+      }
+    }, 30000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [loadServerScenarios]);
   
   // 서버에서 시나리오 삭제
@@ -337,24 +351,50 @@ export default function ScenariosPage() {
           <button
             onClick={() => {
               setShowServerData(false);
-              setError(null); // 전환 시 오류 메시지 초기화
+              setError(null);
+              // 무한 로딩 문제를 방지하기 위해 서버 데이터 로딩 상태도 리셋
+              setServerDataLoading(false);
             }}
-            className={`px-4 py-2 rounded-md ${!showServerData ? 'bg-white shadow-sm' : ''}`}
+            className="px-4 py-2 rounded-md font-medium text-blue-800 hover:bg-blue-50 transition-colors"
           >
             내 토론자료
           </button>
           <button
             onClick={() => {
-              loadServerScenarios();
+              if (!serverDataLoading) {
+                loadServerScenarios();
+              }
             }}
-            disabled={serverDataLoading} // 로딩 중에는 버튼 비활성화
-            className={`px-4 py-2 rounded-md ${showServerData ? 'bg-white shadow-sm' : ''} ${serverDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={serverDataLoading}
+            className={`px-4 py-2 rounded-md font-medium ${showServerData ? 'bg-white shadow-sm' : ''} ${serverDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {serverDataLoading ? '로딩 중...' : '공유 토론자료'}
+            {serverDataLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                로딩 중...
+              </span>
+            ) : '공유 토론자료'}
           </button>
         </div>
-        {/* 새로고침 버튼 추가 */}
-        {showServerData && (
+        
+        {/* 로딩 중 취소 버튼 추가 */}
+        {serverDataLoading && (
+          <button
+            onClick={() => {
+              setServerDataLoading(false);
+              setShowServerData(false);
+            }}
+            className="ml-2 px-3 py-2 rounded-md bg-red-500 text-white hover:bg-red-600 font-medium"
+          >
+            취소
+          </button>
+        )}
+
+        {/* 새로고침 버튼은 로딩 중이 아닐 때만 표시 */}
+        {showServerData && !serverDataLoading && (
           <button
             onClick={loadServerScenarios}
             disabled={serverDataLoading}
@@ -377,16 +417,18 @@ export default function ScenariosPage() {
             </svg>
             <span className="font-medium">{error}</span>
           </div>
-          {showServerData && (
-            <p className="mt-2 text-sm">
-              서버 연결 문제가 발생했습니다. 
+          {serverDataLoading && (
+            <div className="mt-3 flex">
               <button 
-                onClick={() => setShowServerData(false)} 
-                className="ml-2 text-red-600 underline"
+                onClick={() => {
+                  setServerDataLoading(false);
+                  setShowServerData(false);
+                }} 
+                className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
               >
-                내 토론자료로 전환하기
+                로딩 취소하고 내 토론자료로 전환하기
               </button>
-            </p>
+            </div>
           )}
         </div>
       )}
