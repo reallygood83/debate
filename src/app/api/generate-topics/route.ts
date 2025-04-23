@@ -16,8 +16,9 @@ export async function POST(request: Request) {
     }
 
     if (!GEMINI_API_KEY) {
+      console.error('Gemini API 키가 환경변수에 설정되어 있지 않습니다.');
       return NextResponse.json(
-        { error: 'API 키가 설정되지 않았습니다' },
+        { error: 'API 키가 설정되지 않았습니다. 서버 환경 변수에 GEMINI_API_KEY를 추가해주세요.' },
         { status: 500 }
       );
     }

@@ -69,11 +69,15 @@ ${keywords ? `키워드: ${keywords}` : ''}
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('주제 추천에 실패했습니다');
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error === 'API 키가 설정되지 않았습니다') {
+          throw new Error('서버에 Gemini API 키가 설정되어 있지 않습니다. 관리자에게 문의하세요.');
+        } else {
+          throw new Error(data.error || '주제 추천에 실패했습니다');
+        }
+      }
       
       // 응답 텍스트에서 추천 주제 파싱
       const topics = data.response
@@ -84,7 +88,7 @@ ${keywords ? `키워드: ${keywords}` : ''}
       setRecommendations(topics);
     } catch (error) {
       console.error('주제 추천 오류:', error);
-      showToast('주제 추천 중 오류가 발생했습니다', '잠시 후 다시 시도해주세요');
+      showToast(error instanceof Error ? error.message : '주제 추천 중 오류가 발생했습니다', '잠시 후 다시 시도해주세요');
     } finally {
       setIsLoading(false);
     }
