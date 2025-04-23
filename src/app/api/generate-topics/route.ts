@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
     
     // 사용할 모델 설정 - API 키와 호환되는 모델 사용
-    const modelName = "gemini-pro";
+    const modelName = "gemini-2.0-flash";
     let model;
     try {
       model = genAI.getGenerativeModel({
