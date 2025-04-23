@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
 
 export default function CreateTopicPage() {
   const router = useRouter();
@@ -52,60 +51,33 @@ export default function CreateTopicPage() {
       setIsSaving(true);
       setError(null);
       
-      // Form 데이터에서 주제 정보 가져오기
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
-      
-      const newTopic = {
-        id: `topic-${Date.now()}`, // 임시 ID 생성
-        title: formData.get('title') as string,
-        grade: formData.get('grade') as string,
-        author: formData.get('author') as string,
-        background: formData.get('background') as string,
-        teacherTips: formData.get('teacherTips') as string,
-        subject: subjects,
-        proArguments: proArguments.filter(arg => arg.trim() !== ''),
-        conArguments: conArguments.filter(arg => arg.trim() !== ''),
-        expectedOutcomes: expectedOutcomes.filter(outcome => outcome.trim() !== ''),
-        keyQuestions: keyQuestions.filter(question => question.trim() !== ''),
-        createdAt: new Date().toLocaleDateString('ko-KR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+      const response = await fetch('/api/topics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: e.target.title.value,
+          background: e.target.background.value,
+          proArguments,
+          conArguments,
+          teacherTips: e.target.teacherTips.value,
+          keyQuestions,
+          expectedOutcomes,
+          subjects
         }),
-        updatedAt: new Date().toLocaleDateString('ko-KR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })
-      };
+      });
       
-      // 유효성 검사
-      if (newTopic.title.trim() === '') {
-        setError('주제 제목을 입력해주세요.');
-        return;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '토론 주제 생성에 실패했습니다.');
       }
       
-      if (newTopic.proArguments.length === 0 || newTopic.conArguments.length === 0) {
-        setError('찬성 및 반대 논점을 각각 하나 이상 입력해주세요.');
-        return;
-      }
-      
-      // API 호출 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 실제로는 API 호출하여 저장
-      console.log('Created new topic:', newTopic);
-      
-      // 성공 알림
-      alert('토론 주제가 성공적으로 생성되었습니다.');
-      
-      // 주제 목록 페이지로 이동
+      const topic = await response.json();
+      alert('토론 주제가 성공적으로 생성되었습니다!');
       router.push('/topics');
-      
-    } catch (err) {
-      console.error('토론 주제 생성 중 오류 발생:', err);
-      setError('토론 주제를 생성하는 데 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      alert(error.message);
     } finally {
       setIsSaving(false);
     }
@@ -402,7 +374,7 @@ export default function CreateTopicPage() {
               disabled={isSaving}
               className={`bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded flex items-center ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {isSaving && <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>}
               {isSaving ? '생성 중...' : '주제 생성하기'}
             </button>
           </div>

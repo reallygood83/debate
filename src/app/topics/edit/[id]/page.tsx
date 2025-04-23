@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
 
 interface TopicDetail {
   id: string;
@@ -179,7 +178,7 @@ export default function EditTopicPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[70vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
       </div>
     );
   }
@@ -489,7 +488,7 @@ export default function EditTopicPage() {
               disabled={isSaving}
               className={`bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded flex items-center ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {isSaving && <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>}
               {isSaving ? '저장 중...' : '저장하기'}
             </button>
           </div>
