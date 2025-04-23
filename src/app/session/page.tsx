@@ -189,6 +189,10 @@ function SessionContent() {
   const [loading, setLoading] = useState(true);
   const [showPrompts, setShowPrompts] = useState(false);
   
+  // 주제 입력 관련 상태 추가
+  const [customTopic, setCustomTopic] = useState('');
+  const [showTopicInput, setShowTopicInput] = useState(false);
+  
   // 현재 단계와 활동을 배열로 변환
   const getStagesAndActivities = useCallback(() => {
     if (!scenario) return { stages: [], currentActivity: null, currentActiveStage: null };
@@ -216,11 +220,9 @@ function SessionContent() {
       try {
         setLoading(true);
         
-        // scenarioId가 없는 경우, 기본 시나리오 사용
+        // scenarioId가 없는 경우, 주제 입력 화면 표시
         if (!scenarioId) {
-          setScenario(DEFAULT_SCENARIO);
-          setActiveTopic(DEFAULT_SCENARIO.title);
-          setIsDebateActive(true);
+          setShowTopicInput(true);
           setLoading(false);
           return;
         }
@@ -228,9 +230,8 @@ function SessionContent() {
         const result = await getScenarioById(scenarioId);
         
         if (!result.success || !result.data) {
-          console.error('시나리오를 찾을 수 없습니다. 기본 시나리오를 사용합니다.');
-          setScenario(DEFAULT_SCENARIO);
-          setActiveTopic(DEFAULT_SCENARIO.title);
+          console.error('시나리오를 찾을 수 없습니다. 주제 입력 화면으로 전환합니다.');
+          setShowTopicInput(true);
         } else {
           const loadedScenario = result.data;
           setScenario(loadedScenario);
@@ -241,16 +242,14 @@ function SessionContent() {
           } else {
             setActiveTopic(loadedScenario.title);
           }
+          
+          // 토론 활성화 상태 설정
+          setIsDebateActive(true);
         }
-        
-        // 토론 활성화 상태 설정
-        setIsDebateActive(true);
       } catch (error) {
         console.error('시나리오 로드 오류:', error);
-        // 오류 발생 시 기본 시나리오 사용
-        setScenario(DEFAULT_SCENARIO);
-        setActiveTopic(DEFAULT_SCENARIO.title);
-        setIsDebateActive(true);
+        // 오류 발생 시 주제 입력 화면으로 전환
+        setShowTopicInput(true);
       } finally {
         setLoading(false);
       }
@@ -258,6 +257,26 @@ function SessionContent() {
     
     loadScenario();
   }, [scenarioId, setActiveTopic, setIsDebateActive]);
+  
+  // 사용자 정의 주제로 토론 시작
+  const startCustomDebate = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!customTopic.trim()) return;
+    
+    // 기본 시나리오 복사 후 사용자 주제로 변경
+    const customScenario = {
+      ...DEFAULT_SCENARIO,
+      title: customTopic.trim(),
+      topic: customTopic.trim(),
+      id: `custom-${Date.now()}` // 고유 ID 생성
+    };
+    
+    setScenario(customScenario);
+    setActiveTopic(customTopic.trim());
+    setIsDebateActive(true);
+    setShowTopicInput(false);
+  };
   
   const { stages, currentActivity, currentActiveStage } = getStagesAndActivities();
   
@@ -304,6 +323,54 @@ function SessionContent() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-lg">토론 세션을 준비 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // 주제 입력 화면
+  if (showTopicInput) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-24">
+        <div className="container mx-auto px-4 py-12">
+          <div className="bg-white shadow-lg rounded-lg p-8 max-w-2xl mx-auto">
+            <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">토론 주제 입력</h1>
+            
+            <form onSubmit={startCustomDebate} className="space-y-6">
+              <div>
+                <label htmlFor="debateTopic" className="block text-gray-700 font-medium mb-2">
+                  토론 주제를 입력하세요
+                </label>
+                <input
+                  type="text"
+                  id="debateTopic"
+                  value={customTopic}
+                  onChange={(e) => setCustomTopic(e.target.value)}
+                  placeholder="예: 초등학교에 휴대폰을 가지고 와야 한다"
+                  className="w-full px-4 py-3 text-xl font-bold text-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex justify-center">
+                <button
+                  type="submit"
+                  disabled={!customTopic.trim()}
+                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  토론 시작
+                </button>
+              </div>
+              
+              <div className="text-center text-gray-500 text-sm mt-4">
+                주제를 입력하지 않고 시나리오 페이지에서 시나리오를 선택할 수도 있습니다.
+                <br />
+                <Link href="/scenarios" className="text-blue-600 hover:underline">
+                  시나리오 선택하러 가기
+                </Link>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     );
