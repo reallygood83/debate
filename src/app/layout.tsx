@@ -17,6 +17,7 @@ export default function RootLayout({
   // 네비게이션 메뉴 항목
   const navItems = [
     { id: 'home', title: '홈', href: '/' },
+    { id: 'topics', title: '토론 주제', href: '/topics' },
     { id: 'scenarios', title: '시나리오', href: '/scenarios' },
     { id: 'session', title: '토론 진행', href: '/session' },
     { id: 'feedback', title: '피드백 관리', href: 'https://lovabledebate.vercel.app/', external: true },
