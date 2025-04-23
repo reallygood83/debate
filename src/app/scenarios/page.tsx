@@ -158,18 +158,40 @@ export default function ScenariosPage() {
       }
       
       // MongoDB 데이터 형식을 Scenario 형식으로 변환
-      const formattedScenarios: Scenario[] = result.data.map((item: ServerScenario) => ({
-        ...item,
-        id: item._id,
-        createdAt: new Date(item.createdAt),
-        updatedAt: new Date(item.updatedAt),
-        // stages 속성이 없는 경우 기본값 제공
-        stages: item.stages || {
-          stage1: { id: '1', title: '다름과 마주하기', activities: [] },
-          stage2: { id: '2', title: '다름을 이해하기', activities: [] },
-          stage3: { id: '3', title: '다름과 공존하기', activities: [] }
+      const formattedScenarios: Scenario[] = result.data.map((item: ServerScenario) => {
+        // 날짜 문자열을 안전하게 Date 객체로 변환
+        let createdAt: Date;
+        let updatedAt: Date;
+        
+        try {
+          createdAt = new Date(item.createdAt);
+          updatedAt = new Date(item.updatedAt);
+          
+          // 유효하지 않은 날짜인 경우 현재 날짜로 설정
+          if (isNaN(createdAt.getTime())) createdAt = new Date();
+          if (isNaN(updatedAt.getTime())) updatedAt = new Date();
+        } catch (e) {
+          console.error('날짜 변환 오류:', e);
+          createdAt = new Date();
+          updatedAt = new Date();
         }
-      }));
+        
+        return {
+          ...item,
+          id: item._id,
+          title: item.title || '제목 없음',
+          totalDurationMinutes: item.totalDurationMinutes || 30,
+          groupCount: item.groupCount || 4,
+          createdAt,
+          updatedAt,
+          // stages 속성이 없는 경우 기본값 제공
+          stages: item.stages || {
+            stage1: { id: '1', title: '다름과 마주하기', activities: [] },
+            stage2: { id: '2', title: '다름을 이해하기', activities: [] },
+            stage3: { id: '3', title: '다름과 공존하기', activities: [] }
+          }
+        };
+      });
       
       setServerScenarios(formattedScenarios);
       setShowServerData(true);
@@ -241,12 +263,27 @@ export default function ScenariosPage() {
   const displayScenarios = showServerData ? serverScenarios : scenarios;
   
   // 날짜 포맷 헬퍼 함수
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return '날짜 없음';
+    
+    try {
+      // 문자열인 경우 Date 객체로 변환
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // 유효한 날짜인지 확인
+      if (isNaN(dateObj.getTime())) {
+        return '날짜 형식 오류';
+      }
+      
+      return dateObj.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('날짜 포맷 오류:', error);
+      return '날짜 처리 오류';
+    }
   };
   
   // 토론 시작 핸들러
