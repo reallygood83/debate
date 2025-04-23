@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { getScenarioById, deleteScenario } from '@/utils/scenarioUtils';
+import { getScenarioById, deleteScenario, getLocalScenarioById } from '@/utils/scenarioUtils';
 
 // 시나리오 타입 정의 (scenarios 페이지와 동일한 타입)
 interface Scenario {
@@ -179,7 +179,7 @@ export default function ScenarioDetailPage() {
 
       try {
         // 1. 로컬 스토리지에서 시나리오 찾기
-        const localScenario = getScenarioById(id);
+        const localScenario = getLocalScenarioById(id);
         if (localScenario) {
           setScenario(localScenario);
           setLoading(false);
@@ -194,46 +194,18 @@ export default function ScenarioDetailPage() {
           return;
         }
 
-        // 3. 서버에서 시나리오 불러오기
-        const response = await fetch(`/api/scenarios/${id}`);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
+        // 3. 서버에서 시나리오 불러오기 시도
+        try {
+          const result = await getScenarioById(id);
+          if (result.success && result.data) {
+            setScenario(result.data);
+          } else {
             throw new Error('시나리오를 찾을 수 없습니다.');
           }
+        } catch (serverError) {
+          console.error('서버에서 시나리오 로드 실패:', serverError);
           throw new Error('서버에서 시나리오를 불러오는 중 오류가 발생했습니다.');
         }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || '서버 응답 오류');
-        }
-        
-        // MongoDB 데이터 형식을 Scenario 형식으로 변환
-        const serverData: ServerScenario = result.data;
-        const formattedScenario: Scenario = {
-          id: serverData._id,
-          title: serverData.title,
-          description: serverData.description || '',
-          topic: serverData.topic || '',
-          grade: serverData.grade || '',
-          subject: serverData.subject || '',
-          createdAt: serverData.createdAt,  // 날짜 문자열로 저장하고 렌더링 시 formatDate로 처리
-          updatedAt: serverData.updatedAt,
-          totalDurationMinutes: serverData.totalDurationMinutes,
-          stages: serverData.stages,
-          details: {
-            background: serverData.scenarioDetails?.background || '',
-            affirmative: serverData.scenarioDetails?.proArguments?.join('\n\n') || '',
-            negative: serverData.scenarioDetails?.conArguments?.join('\n\n') || '',
-            teacherNotes: serverData.scenarioDetails?.teacherTips || '',
-            materials: serverData.scenarioDetails?.materials || [],
-            expectedOutcomes: serverData.scenarioDetails?.expectedOutcomes || []
-          }
-        };
-        
-        setScenario(formattedScenario);
       } catch (err: any) {
         console.error('시나리오 로드 오류:', err);
         setError(err.message || '시나리오를 불러오는 중 오류가 발생했습니다.');

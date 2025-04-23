@@ -91,6 +91,12 @@ export async function fetchServerScenarios(page = 1, limit = 20, search = ''): P
 
 // ID로 서버에서 시나리오 가져오기
 export async function getScenarioById(id: string) {
+  // 로컬에서 먼저 확인
+  const localScenario = getLocalScenarioById(id);
+  if (localScenario) {
+    return { success: true, data: localScenario };
+  }
+  
   try {
     const response = await fetchWithRetry(`/api/scenarios/${id}`);
     const result = await response.json();

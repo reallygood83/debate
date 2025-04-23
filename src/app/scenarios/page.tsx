@@ -129,7 +129,7 @@ export default function ScenariosPage() {
   const { setActiveTopic, setIsDebateActive } = useDebate();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showServerData, setShowServerData] = useState(true);
+  const [showServerData, setShowServerData] = useState(false);
   const [serverScenarios, setServerScenarios] = useState<Scenario[]>([]);
   const [serverDataLoading, setServerDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -230,8 +230,8 @@ export default function ScenariosPage() {
     
     loadScenarios();
     
-    // 페이지 로드 시 서버 데이터 자동 로드
-    loadServerScenarios();
+    // 페이지 로드 시 서버 데이터 자동 로드하지 않음
+    // 사용자가 서버 데이터 탭을 클릭할 때만 로드함
     
     // 로딩 상태가 30초 이상 지속되면 자동 취소
     const timeoutId = setTimeout(() => {
@@ -246,7 +246,7 @@ export default function ScenariosPage() {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [loadServerScenarios]);
+  }, [loadServerScenarios, serverDataLoading]);
   
   // 서버에서 시나리오 삭제
   const handleDeleteServerScenario = async (id: string) => {

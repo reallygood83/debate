@@ -227,29 +227,33 @@ function SessionContent() {
           return;
         }
         
-        const result = await getScenarioById(scenarioId);
-        
-        if (!result.success || !result.data) {
-          console.error('시나리오를 찾을 수 없습니다. 주제 입력 화면으로 전환합니다.');
-          setShowTopicInput(true);
-        } else {
-          const loadedScenario = result.data;
-          setScenario(loadedScenario);
+        // scenarioId가 있는 경우 시나리오 로드 시도
+        try {
+          const result = await getScenarioById(scenarioId);
           
-          // 토론 주제 설정
-          if (loadedScenario.topic) {
-            setActiveTopic(loadedScenario.topic);
+          if (result.success && result.data) {
+            const loadedScenario = result.data;
+            setScenario(loadedScenario);
+            
+            // 토론 주제 설정
+            if (loadedScenario.topic) {
+              setActiveTopic(loadedScenario.topic);
+            } else {
+              setActiveTopic(loadedScenario.title);
+            }
+            
+            // 토론 활성화 상태 설정
+            setIsDebateActive(true);
           } else {
-            setActiveTopic(loadedScenario.title);
+            // 시나리오를 찾을 수 없는 경우 주제 입력 화면 표시
+            console.error('시나리오를 찾을 수 없습니다. 주제 입력 화면으로 전환합니다.');
+            setShowTopicInput(true);
           }
-          
-          // 토론 활성화 상태 설정
-          setIsDebateActive(true);
+        } catch (error) {
+          // 시나리오 로드 중 오류 발생 시 주제 입력 화면 표시
+          console.error('시나리오 로드 오류:', error);
+          setShowTopicInput(true);
         }
-      } catch (error) {
-        console.error('시나리오 로드 오류:', error);
-        // 오류 발생 시 주제 입력 화면으로 전환
-        setShowTopicInput(true);
       } finally {
         setLoading(false);
       }
