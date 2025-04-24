@@ -76,12 +76,12 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold mb-3">학생 피드백</h3>
               <p className="text-gray-600 mb-4">AI 기술로 학생들의 토론 참여에 개인화된 맞춤형 피드백을 효율적으로 제공하세요.</p>
-              <Link href="/feedback" className="text-purple-600 font-medium inline-flex items-center">
+              <a href="https://lovabledebate.vercel.app" target="_blank" rel="noopener noreferrer" className="text-purple-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-              </Link>
+              </a>
             </div>
           </div>
         </div>
