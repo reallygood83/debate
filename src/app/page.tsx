@@ -43,7 +43,7 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-3">토론 시나리오</h3>
-              <p className="text-gray-600 mb-4">다양한 주제의 토론 시나리오를 만들고 관리합니다.</p>
+              <p className="text-gray-600 mb-4">다양한 주제와 교과별 맞춤형 토론 시나리오를 제공하여 수업에 바로 활용하세요.</p>
               <Link href="/scenarios" className="text-blue-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
@@ -59,7 +59,7 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-3">토론 진행</h3>
-              <p className="text-gray-600 mb-4">시나리오에 따라 토론을 진행하고 시간을 관리합니다.</p>
+              <p className="text-gray-600 mb-4">단계별 가이드와 시간 관리 기능으로 효과적인 토론 수업을 쉽게 진행하세요.</p>
               <Link href="/session" className="text-green-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
@@ -71,12 +71,12 @@ export default function HomePage() {
             <div className="bg-purple-50 rounded-lg p-8 text-center shadow-md hover:shadow-lg transition-shadow">
               <div className="text-purple-600 mb-4 flex justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-3">토론 자료</h3>
-              <p className="text-gray-600 mb-4">토론 규칙, 입론서, 성찰 질문 등 유용한 자료를 제공합니다.</p>
-              <Link href="/resources" className="text-purple-600 font-medium inline-flex items-center">
+              <h3 className="text-xl font-bold mb-3">학생 피드백</h3>
+              <p className="text-gray-600 mb-4">AI 기술로 학생들의 토론 참여에 개인화된 맞춤형 피드백을 효율적으로 제공하세요.</p>
+              <Link href="/feedback" className="text-purple-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
