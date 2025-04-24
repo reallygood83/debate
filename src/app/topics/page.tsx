@@ -64,9 +64,18 @@ export default function TopicsPage() {
         throw new Error('토론 주제를 불러오는데 실패했습니다.');
       }
       
-      const data = await response.json();
-      setTopics(data.topics);
-      setPagination(data.pagination);
+      const responseData = await response.json();
+      
+      // API 응답 구조 확인 및 데이터 추출
+      const data = responseData.data || responseData;
+      
+      setTopics(data.topics || []);
+      setPagination(data.pagination || {
+        total: 0,
+        page: 1,
+        limit: 8,
+        totalPages: 1
+      });
       
     } catch (err: any) {
       setError(err.message || '토론 주제를 불러오는 중 오류가 발생했습니다.');
@@ -76,17 +85,22 @@ export default function TopicsPage() {
     }
   };
 
-  // 모든 과목 목록 가져오기
+  // 주제 카테고리 가져오기
   const fetchSubjects = async () => {
     try {
       const response = await fetch('/api/topics/subjects');
       if (!response.ok) {
-        throw new Error('과목 목록을 불러오는데 실패했습니다.');
+        throw new Error('주제 카테고리를 불러오는데 실패했습니다.');
       }
-      const data = await response.json();
-      setSubjects(data.subjects);
-    } catch (err) {
-      console.error('과목 목록 조회 오류:', err);
+      const responseData = await response.json();
+      
+      // API 응답 구조 확인 및 데이터 추출
+      const data = responseData.data || responseData;
+      const subjects = data.subjects || data;
+      
+      setSubjects(['all', ...subjects]);
+    } catch (err: any) {
+      console.error('주제 카테고리 조회 오류:', err);
     }
   };
 
