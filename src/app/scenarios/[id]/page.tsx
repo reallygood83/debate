@@ -33,6 +33,16 @@ interface Scenario {
     materials?: string[];
     expectedOutcomes?: string[];
   };
+  scenarioDetails?: {
+    background?: string;
+    proArguments?: string[];
+    conArguments?: string[];
+    teacherTips?: string;
+    keyQuestions?: string[];
+    materials?: string[];
+    expectedOutcomes?: string[];
+  };
+  aiGenerated?: boolean;
 }
 
 // MongoDB에서 가져온 시나리오 타입
@@ -56,6 +66,7 @@ interface ServerScenario {
     materials?: string[];
     expectedOutcomes?: string[];
   };
+  aiGenerated?: boolean;
 }
 
 // 예시 시나리오 데이터 (실제로는 API나 데이터 스토어에서 가져옴)
@@ -192,7 +203,12 @@ export default function ScenarioDetailPage() {
         // 1. 로컬 스토리지에서 시나리오 찾기
         const localScenario = getLocalScenarioById(id);
         if (localScenario) {
+          console.log("로컬에서 시나리오 찾음:", localScenario);
           setScenario(localScenario);
+          // AI 생성 콘텐츠가 있으면 표시 설정
+          if (localScenario.scenarioDetails) {
+            setShowAIContent(true);
+          }
           setLoading(false);
           return;
         }
@@ -209,7 +225,12 @@ export default function ScenarioDetailPage() {
         try {
           const result = await getScenarioById(id);
           if (result.success && result.data) {
+            console.log("서버에서 시나리오 찾음:", result.data);
             setScenario(result.data);
+            // AI 생성 콘텐츠가 있으면 표시 설정
+            if (result.data.scenarioDetails) {
+              setShowAIContent(true);
+            }
           } else {
             throw new Error('시나리오를 찾을 수 없습니다.');
           }
@@ -504,7 +525,7 @@ export default function ScenarioDetailPage() {
                 <p className="whitespace-pre-line">{scenario.details?.teacherNotes}</p>
               </div>
               
-              {scenario.details?.expectedOutcomes && (
+              {scenario.details && scenario.details.expectedOutcomes && (
                 <>
                   <h4 className="text-lg font-medium text-blue-700 mb-3">기대 학습 성과</h4>
                   <div className="bg-white p-3 rounded-md shadow-sm mb-6">
@@ -584,40 +605,88 @@ export default function ScenarioDetailPage() {
             
             {/* 토론 세부 내용 */}
             <div className="md:col-span-2">
-              {scenario.details && (
-                <>
-                  <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h2 className="text-xl font-bold text-blue-800 mb-4">토론 배경</h2>
-                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.background}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-green-50 rounded-lg shadow p-6">
-                      <h2 className="text-xl font-bold text-green-800 mb-4">찬성 입장</h2>
-                      <p className="text-gray-700 whitespace-pre-line">{scenario.details.affirmative}</p>
-                    </div>
-                    
-                    <div className="bg-red-50 rounded-lg shadow p-6">
-                      <h2 className="text-xl font-bold text-red-800 mb-4">반대 입장</h2>
-                      <p className="text-gray-700 whitespace-pre-line">{scenario.details.negative}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-yellow-50 rounded-lg shadow p-6 mb-6">
-                    <h2 className="text-xl font-bold text-yellow-800 mb-4">교사 지도 노트</h2>
-                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.teacherNotes}</p>
-                  </div>
-                  
-                  {scenario.details.expectedOutcomes && (
-                    <div className="bg-white rounded-lg shadow p-6">
-                      <h2 className="text-xl font-bold text-blue-800 mb-4">기대 학습 성과</h2>
+              {/* 시나리오 토론 배경 */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">토론 배경</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap">
+                    {scenario.details?.background || 
+                     scenario.scenarioDetails?.background || 
+                     '토론 배경 정보가 없습니다.'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* 찬성 입장 */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">찬성 입장</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="whitespace-pre-wrap">
+                    {scenario.details?.affirmative ? (
+                      <p>{scenario.details.affirmative}</p>
+                    ) : scenario.scenarioDetails?.proArguments ? (
                       <ul className="list-disc pl-5 space-y-2">
-                        {scenario.details.expectedOutcomes.map((outcome, index) => (
-                          <li key={index} className="text-gray-700">{outcome}</li>
+                        {scenario.scenarioDetails.proArguments.map((arg, index) => (
+                          <li key={index}>{arg}</li>
                         ))}
                       </ul>
-                    </div>
-                  )}
+                    ) : (
+                      <p>찬성 입장 정보가 없습니다.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 반대 입장 */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">반대 입장</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="whitespace-pre-wrap">
+                    {scenario.details?.negative ? (
+                      <p>{scenario.details.negative}</p>
+                    ) : scenario.scenarioDetails?.conArguments ? (
+                      <ul className="list-disc pl-5 space-y-2">
+                        {scenario.scenarioDetails.conArguments.map((arg, index) => (
+                          <li key={index}>{arg}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>반대 입장 정보가 없습니다.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 교사 지도 노트 */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">교사 지도 노트</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap">
+                    {scenario.details?.teacherNotes || 
+                     scenario.scenarioDetails?.teacherTips || 
+                     '교사 지도 노트가 없습니다.'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {scenario.details && scenario.details.expectedOutcomes && (
+                <>
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-xl font-bold text-blue-800 mb-4">기대 학습 성과</h2>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {scenario.details.expectedOutcomes.map((outcome, index) => (
+                        <li key={index} className="text-gray-700">{outcome}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </>
               )}
             </div>

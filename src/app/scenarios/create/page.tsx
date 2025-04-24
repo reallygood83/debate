@@ -194,6 +194,7 @@ export default function CreateScenarioPage() {
       
       // AI 생성 정보 추가
       if (formData.scenarioDetails) {
+        console.log("AI 생성 콘텐츠 추가:", formData.scenarioDetails);
         newScenario.aiGenerated = true;
         newScenario.scenarioDetails = formData.scenarioDetails;
       }
@@ -204,6 +205,11 @@ export default function CreateScenarioPage() {
       newScenario.topic = formData.topic;
       newScenario.keywords = formData.keywords;
       
+      console.log("저장할 시나리오:", {
+        ...newScenario,
+        scenarioDetails: newScenario.scenarioDetails ? '(AI 생성 콘텐츠 포함)' : '없음'
+      });
+      
       // saveScenario 유틸리티 함수 호출 (로컬 및 서버 저장)
       const saveResult = await saveScenario(newScenario);
       
@@ -212,7 +218,8 @@ export default function CreateScenarioPage() {
         if (saveResult.serverSuccess) {
           alert("시나리오가 성공적으로 저장되었습니다. (로컬 저장소 및 서버)");
         } else {
-          alert("시나리오가 로컬에 저장되었습니다. 서버 저장에 실패했습니다.");
+          console.error("서버 저장 실패 - 로컬에만 저장됨");
+          alert("시나리오가 로컬에 저장되었습니다. 서버 저장에 실패했습니다.\n\n가능한 원인:\n1. 서버 연결 문제\n2. MongoDB 연결 문제\n3. 데이터 유효성 검사 실패");
         }
         
         // 시나리오 메인 페이지로 이동
@@ -222,7 +229,7 @@ export default function CreateScenarioPage() {
       }
     } catch (error) {
       console.error('시나리오 저장 오류:', error);
-      alert('시나리오를 저장하는 중 오류가 발생했습니다.');
+      alert('시나리오를 저장하는 중 오류가 발생했습니다: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
   

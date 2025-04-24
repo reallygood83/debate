@@ -118,6 +118,13 @@ export async function saveScenarioToServer(scenario: Scenario): Promise<Scenario
     const method = scenario.id ? 'PUT' : 'POST';
     const url = scenario.id ? `/api/scenarios/${scenario.id}` : '/api/scenarios';
     
+    console.log(`서버에 시나리오 저장 시도 (${method}):`, url);
+    console.log('저장할 시나리오 데이터:', JSON.stringify({
+      ...scenario,
+      // 로그에서 중요 내용만 표시
+      scenarioDetails: scenario.scenarioDetails ? '(AI 생성 콘텐츠 포함)' : '없음'
+    }, null, 2));
+    
     const response = await fetchWithRetry(url, {
       method,
       headers: {
@@ -129,13 +136,15 @@ export async function saveScenarioToServer(scenario: Scenario): Promise<Scenario
     const result = await response.json();
     
     if (!result.success) {
+      console.error('서버 응답이 success: false를 반환:', result);
       throw new Error(result.error || '서버에 시나리오를 저장하는 중 오류가 발생했습니다.');
     }
     
+    console.log('서버 저장 성공 응답:', result.data._id || result.data.id);
     return parseScenario(result.data);
   } catch (error) {
-    console.error('시나리오 저장 오류:', error);
-    throw new Error('서버에 시나리오를 저장하는 중 오류가 발생했습니다.');
+    console.error('시나리오 서버 저장 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
+    throw new Error(error instanceof Error ? error.message : '서버에 시나리오를 저장하는 중 오류가 발생했습니다.');
   }
 }
 
@@ -237,11 +246,22 @@ export async function saveScenario(scenario: Scenario): Promise<{ localSuccess: 
   // 서버에 저장 시도 (실패해도 로컬에는 저장됨)
   if (typeof window !== 'undefined') {
     try {
+      console.log('서버 저장 시도 시작');
       const savedScenario = await saveScenarioToServer(scenario);
       serverSuccess = true;
       console.log('시나리오를 서버에 저장했습니다: ', savedScenario.title);
+      
+      // AI 생성된 콘텐츠가 있는 경우, 로컬에도 서버 ID로 업데이트
+      if (serverSuccess && scenario.aiGenerated) {
+        const serverScenario = {
+          ...scenario,
+          id: savedScenario.id, // 서버에서 받은 ID로 업데이트
+        };
+        saveScenarioLocally(serverScenario);
+        console.log('로컬 시나리오를 서버 ID로 업데이트:', serverScenario.id);
+      }
     } catch (serverError) {
-      console.error('서버 저장 실패:', serverError);
+      console.error('서버 저장 실패 세부 정보:', serverError);
       // 서버 저장이 실패해도 오류를 던지지 않고 결과만 반환
     }
   }

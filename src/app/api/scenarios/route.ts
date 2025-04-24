@@ -140,6 +140,13 @@ export async function POST(request: NextRequest) {
   console.log("====== POST /api/scenarios 실행 시작 ======");
   try {
     const body = await request.json();
+    console.log("요청 본문 미리보기:", {
+      title: body.title,
+      aiGenerated: body.aiGenerated,
+      hasScenarioDetails: !!body.scenarioDetails,
+      totalDurationMinutes: body.totalDurationMinutes,
+    });
+    
     console.log("MongoDB 연결 시도 중...");
     const conn = await dbConnect();
     
@@ -157,6 +164,26 @@ export async function POST(request: NextRequest) {
     
     console.log("MongoDB 연결 성공!");
     
+    // 필수 필드 검증
+    if (!body.title || !body.totalDurationMinutes) {
+      console.error("필수 필드 누락:", {
+        hasTitle: !!body.title, 
+        hasDuration: !!body.totalDurationMinutes
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: '필수 필드가 누락되었습니다. (title, totalDurationMinutes)' 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // AI 생성 콘텐츠 검증
+    if (body.aiGenerated && !body.scenarioDetails) {
+      console.warn("AI 생성 플래그는 설정되었지만 scenarioDetails 객체가 없음");
+    }
+    
     // 시나리오 생성
     console.log("새 시나리오 생성 중...");
     const scenario = new Scenario({
@@ -167,7 +194,7 @@ export async function POST(request: NextRequest) {
     
     // 타임아웃 적용하여 저장
     console.log("시나리오 데이터베이스 저장 중...");
-    const savedScenario = await withTimeout(scenario.save(), RESPONSE_TIMEOUT);
+    const savedScenario = await withTimeout(scenario.save(), RESPONSE_TIMEOUT) as any;
     console.log(`시나리오 저장 성공: ID=${savedScenario._id}`);
     
     console.log("====== POST /api/scenarios 성공적으로 완료 ======");
@@ -178,6 +205,36 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error("====== POST /api/scenarios 오류 발생 ======");
     console.error('시나리오 저장 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
+    
+    // 잘못된 요청 형식 감지
+    if (error instanceof Error && 
+        (error.name === 'SyntaxError' || 
+         error.message.includes('JSON'))) {
+      console.error("JSON 파싱 오류");
+      return NextResponse.json(
+        { 
+          success: false,
+          error: '잘못된 요청 형식입니다.',
+          details: error.message
+        },
+        { status: 400 }
+      );
+    }
+    
+    // 유효성 검사 오류 감지
+    if (error instanceof Error && 
+        (error.name === 'ValidationError' || 
+         error.message.includes('validation'))) {
+      console.error("데이터 유효성 검사 오류");
+      return NextResponse.json(
+        { 
+          success: false,
+          error: '데이터 유효성 검사 오류가 발생했습니다.',
+          details: error.message
+        },
+        { status: 400 }
+      );
+    }
     
     // MongoNotConnectedError 특별 처리
     if (error instanceof Error && 
