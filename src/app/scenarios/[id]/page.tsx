@@ -588,12 +588,12 @@ export default function ScenarioDetailPage() {
             {/* 토론 세부 내용 */}
             <div className="md:col-span-2">
               {/* 시나리오 토론 배경 */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="text-xl">토론 배경</CardTitle>
+              <Card className="mt-6 bg-blue-50 border border-blue-100">
+                <CardHeader className="border-b border-blue-100">
+                  <CardTitle className="text-xl text-blue-800">토론 배경</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap text-gray-800">
                     {scenario.details?.background || 
                      scenario.scenarioDetails?.background || 
                      '토론 배경 정보가 없습니다.'}
@@ -602,12 +602,12 @@ export default function ScenarioDetailPage() {
               </Card>
 
               {/* 찬성 입장 */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="text-xl">찬성 입장</CardTitle>
+              <Card className="mt-6 bg-green-50 border border-green-100">
+                <CardHeader className="border-b border-green-100">
+                  <CardTitle className="text-xl text-green-800">찬성 입장</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="whitespace-pre-wrap">
+                  <div className="whitespace-pre-wrap text-gray-800">
                     {scenario.details?.affirmative ? (
                       <p>{scenario.details.affirmative}</p>
                     ) : scenario.scenarioDetails?.proArguments ? (
@@ -624,12 +624,12 @@ export default function ScenarioDetailPage() {
               </Card>
 
               {/* 반대 입장 */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="text-xl">반대 입장</CardTitle>
+              <Card className="mt-6 bg-red-50 border border-red-100">
+                <CardHeader className="border-b border-red-100">
+                  <CardTitle className="text-xl text-red-800">반대 입장</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="whitespace-pre-wrap">
+                  <div className="whitespace-pre-wrap text-gray-800">
                     {scenario.details?.negative ? (
                       <p>{scenario.details.negative}</p>
                     ) : scenario.scenarioDetails?.conArguments ? (
@@ -646,12 +646,12 @@ export default function ScenarioDetailPage() {
               </Card>
 
               {/* 교사 지도 노트 */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="text-xl">교사 지도 노트</CardTitle>
+              <Card className="mt-6 bg-yellow-50 border border-yellow-100">
+                <CardHeader className="border-b border-yellow-100">
+                  <CardTitle className="text-xl text-yellow-800">교사 지도 노트</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap text-gray-800">
                     {scenario.details?.teacherNotes || 
                      scenario.scenarioDetails?.teacherTips || 
                      '교사 지도 노트가 없습니다.'}
