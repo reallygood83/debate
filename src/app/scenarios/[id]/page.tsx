@@ -205,10 +205,8 @@ export default function ScenarioDetailPage() {
         if (localScenario) {
           console.log("로컬에서 시나리오 찾음:", localScenario);
           setScenario(localScenario);
-          // AI 생성 콘텐츠가 있으면 표시 설정
-          if (localScenario.scenarioDetails) {
-            setShowAIContent(true);
-          }
+          // AI 생성 콘텐츠 숨김 상태 유지
+          setShowAIContent(false);
           setLoading(false);
           return;
         }
@@ -227,10 +225,8 @@ export default function ScenarioDetailPage() {
           if (result.success && result.data) {
             console.log("서버에서 시나리오 찾음:", result.data);
             setScenario(result.data);
-            // AI 생성 콘텐츠가 있으면 표시 설정
-            if (result.data.scenarioDetails) {
-              setShowAIContent(true);
-            }
+            // AI 생성 콘텐츠 숨김 상태 유지
+            setShowAIContent(false);
           } else {
             throw new Error('시나리오를 찾을 수 없습니다.');
           }
@@ -446,20 +442,6 @@ export default function ScenarioDetailPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors shadow-sm"
               >
                 삭제
-              </button>
-              <button 
-                onClick={toggleAIContent}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors shadow-sm"
-              >
-                {showAIContent ? 'AI 콘텐츠 닫기' : 'AI 콘텐츠 보기'}
-              </button>
-              <button 
-                onClick={exportAIContentToPDF}
-                disabled={exporting}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1"
-              >
-                <FileDown size={16} />
-                {exporting ? 'PDF 생성 중...' : 'AI 콘텐츠 저장'}
               </button>
             </div>
           </div>
