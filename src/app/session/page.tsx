@@ -345,15 +345,28 @@ function SessionContent() {
                 <label htmlFor="debateTopic" className="block text-gray-700 font-medium mb-2">
                   토론 주제를 입력하세요
                 </label>
+                <div className="text-sm text-gray-500 mb-3">
+                  토론 주제는 '<span className="font-medium">~에 찬성한다 vs 반대한다</span>' 또는 
+                  '<span className="font-medium">~해야 한다 vs ~하지 말아야 한다</span>' 형식으로 
+                  입력하시면 효과적인 토론이 가능합니다.
+                </div>
                 <input
                   type="text"
                   id="debateTopic"
                   value={customTopic}
                   onChange={(e) => setCustomTopic(e.target.value)}
-                  placeholder="예: 초등학교에 휴대폰을 가지고 와야 한다"
+                  placeholder="예: 초등학교에 휴대폰을 가지고 와야 한다 vs 가지고 오지 말아야 한다"
                   className="w-full px-4 py-3 text-xl font-bold text-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
+                <div className="mt-2 text-sm text-gray-500">
+                  <p>토론 주제 예시:</p>
+                  <ul className="list-disc pl-5 mt-1">
+                    <li>급식 잔반 처리에 페널티를 부과해야 한다 vs 부과하지 말아야 한다</li>
+                    <li>학교 교복 착용을 의무화하는 것에 찬성한다 vs 반대한다</li>
+                    <li>어린이 스마트폰 사용 시간을 제한해야 한다 vs 제한하지 말아야 한다</li>
+                  </ul>
+                </div>
               </div>
               
               <div className="flex justify-center">

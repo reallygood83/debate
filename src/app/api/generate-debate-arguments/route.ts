@@ -6,60 +6,73 @@ import { getEnvVar } from '@/utils/envUtils';
 // Google Gemini API 초기화
 let genAI: GoogleGenerativeAI | null = null;
 
-// 응답 데이터 타입 정의
-interface TopicSuggestion {
-  title: string;
-  description: string;
-  proView?: string;
-  conView?: string;
-}
-
-// 토론 주제 추천 프롬프트
-const TOPIC_RECOMMENDATION_PROMPT = `
-# 역할: 초등학교 학생들을 위한 토론 주제 추천 도우미
-# 목표: 학생들의 학습 수준과 관심사에 적합한 토론 주제를 추천하되, 경기 토론 수업 모형의 '다름'과 '공존'에 초점을 맞춘 주제를 제안한다.
+// 찬반 논거 생성 프롬프트
+const DEBATE_ARGUMENTS_PROMPT = `
+# 역할: 초등학교 {학년군}학생들을 위한 토론 논거 생성 도우미
+# 목표: 주어진 토론 주제에 대해 찬성과 반대 양측의 논거를 초등학교 {학년군}학생 수준에 맞게 제시한다.
 
 # 지침:
-- 사용자가 선택한 {학년군} 수준에 적합한 토론 주제를 추천한다 (너무 어렵거나 전문적인 주제는 피한다).
-- {학년군}학생들이 자신과 다른 의견을 가진 사람들의 입장도 이해할 수 있는 주제를 선정한다.
-- 찬성/반대 입장이 분명하게 나뉠 수 있는 주제를 선정한다.
-- {학년군}학생들의 일상생활이나 학교생활과 관련된 주제를 포함시킨다.
-- 사회적, 윤리적 사고를 촉진하는 주제를 포함한다.
-- 제안하는 각 주제에 대해 그 주제가 왜 좋은 토론 주제인지 간단히 설명한다.
-{category_instruction}
+- 주어진 토론 주제: {topic}
+- 모든 내용은 초등학교 {학년군} 학생이 이해할 수 있는 수준으로 작성한다.
+- 논거는 명확하고 구체적이며 논리적이어야 한다.
+- 각 논거에는 간단한 근거나 예시를 포함한다.
+- 각 측에 3-5개의 논거를 제시한다.
+- 너무 추상적이거나 철학적인 개념은 피하고 실제적인 상황과 연결시킨다.
+- 각 측의 관점을 균형있게 표현한다.
 
-JSON 형식으로 다음과 같이 응답해주세요:
-[
-  {
-    "title": "토론 주제 1",
-    "description": "이 주제가 좋은 토론 주제인 이유와 어떤 점을 생각해볼 수 있는지 간단한 설명",
-    "proView": "찬성 측 관점을 한 문장으로 요약",
-    "conView": "반대 측 관점을 한 문장으로 요약"
-  },
-  {
-    "title": "토론 주제 2",
-    "description": "이 주제가 좋은 토론 주제인 이유와 어떤 점을 생각해볼 수 있는지 간단한 설명",
-    "proView": "찬성 측 관점을 한 문장으로 요약",
-    "conView": "반대 측 관점을 한 문장으로 요약"
-  },
-  {
-    "title": "토론 주제 3",
-    "description": "이 주제가 좋은 토론 주제인 이유와 어떤 점을 생각해볼 수 있는지 간단한 설명",
-    "proView": "찬성 측 관점을 한 문장으로 요약",
-    "conView": "반대 측 관점을 한 문장으로 요약"
-  }
-]
+# 출력 형식 JSON:
+{
+  "proArguments": [
+    {
+      "title": "논거 제목 1",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    },
+    {
+      "title": "논거 제목 2",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    },
+    {
+      "title": "논거 제목 3",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    }
+  ],
+  "conArguments": [
+    {
+      "title": "논거 제목 1",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    },
+    {
+      "title": "논거 제목 2",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    },
+    {
+      "title": "논거 제목 3",
+      "content": "구체적인 설명 및 근거",
+      "example": "실생활 예시나 상황"
+    }
+  ],
+  "debatePoints": [
+    "토론 시 고려해야 할 중요한 질문이나 관점",
+    "논쟁이 될 수 있는 핵심 요소",
+    "다양한 관점에서 생각해 볼 수 있는 질문"
+  ]
+}
 
 JSON 형식만 출력하세요. 바깥에 Markdown이나 설명 텍스트를 추가하지 마세요.
 `;
 
 export async function POST(request: NextRequest) {
   try {
-    const { subject, gradeGroup, keywords } = await request.json();
+    const { topic, gradeGroup } = await request.json();
 
-    if (!subject && !keywords) {
+    if (!topic) {
       return NextResponse.json(
-        { error: '최소한 교과 또는 키워드를 입력해주세요' },
+        { error: '토론 주제를 입력해주세요' },
         { status: 400 }
       );
     }
@@ -114,7 +127,7 @@ export async function POST(request: NextRequest) {
           },
         ],
         generationConfig: {
-          temperature: 0.8,
+          temperature: 0.7,
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 2048,
@@ -129,28 +142,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 프롬프트 구성
-    let categoryInstruction = '';
-    if (subject) {
-      categoryInstruction = `
-- 다음 분야에 초점을 맞춰 토론 주제를 추천한다: ${subject}
-- 이 분야와 관련된 초등학생이 이해할 수 있는 토론 주제를 선정한다.
-- 분야는 넓게 해석하여 관련된 다양한 측면의 주제를 포함한다.
-      `;
-    }
-    
-    if (keywords) {
-      categoryInstruction += `
-- 다음 키워드와 관련된 토론 주제를 추천한다: ${keywords}
-- 이 키워드와 관련하여 다양한 관점에서 논의할 수 있는 주제를 선정한다.
-      `;
-    }
-    
-    let finalPrompt = TOPIC_RECOMMENDATION_PROMPT
+    let finalPrompt = DEBATE_ARGUMENTS_PROMPT
       .replace('{학년군}', gradeGroup || '초등학교')
-      .replace('{category_instruction}', categoryInstruction);
-    
+      .replace('{topic}', topic);
+
     // API 호출에 타임아웃 적용
-    const timeoutMs = 25000; // 25초 타임아웃
+    const timeoutMs = 30000; // 30초 타임아웃
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Gemini API 요청 시간 초과')), timeoutMs);
     });
@@ -163,31 +160,28 @@ export async function POST(request: NextRequest) {
       let generatedText = response.text();
 
       // JSON 형식만 추출
-      const jsonMatch = generatedText.match(/\[\s*\{.*\}\s*\]/s);
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         generatedText = jsonMatch[0];
       }
 
       try {
         // JSON 파싱 및 검증
-        const topics: TopicSuggestion[] = JSON.parse(generatedText);
+        const debateArguments = JSON.parse(generatedText);
         
-        if (!Array.isArray(topics) || topics.length === 0) {
-          throw new Error('유효한 토론 주제가 생성되지 않았습니다.');
+        if (!debateArguments.proArguments || !debateArguments.conArguments || !debateArguments.debatePoints) {
+          throw new Error('유효한 논거가 생성되지 않았습니다.');
         }
-        
-        // 최대 3개의 주제만 반환
-        const filteredTopics = topics.slice(0, 3);
         
         return NextResponse.json({ 
           success: true, 
-          topics: filteredTopics 
+          data: debateArguments
         });
       } catch (jsonError) {
         console.error('JSON 파싱 오류:', jsonError, generatedText);
         return NextResponse.json(
           { 
-            error: 'AI가 생성한 주제를 처리하는 중 오류가 발생했습니다. 다시 시도해주세요.',
+            error: 'AI가 생성한 논거를 처리하는 중 오류가 발생했습니다. 다시 시도해주세요.',
             rawText: generatedText
           },
           { status: 500 }

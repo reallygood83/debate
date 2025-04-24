@@ -4,6 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { getScenarioById, deleteScenario, getLocalScenarioById } from '@/utils/scenarioUtils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, FileDown } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { FaSpinner, FaFilePdf } from 'react-icons/fa';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { MdFileCopy } from 'react-icons/md';
 
 // 시나리오 타입 정의 (scenarios 페이지와 동일한 타입)
 interface Scenario {
@@ -171,6 +179,9 @@ export default function ScenarioDetailPage() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingScenario, setDeletingScenario] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showAIContent, setShowAIContent] = useState(false);
 
   useEffect(() => {
     async function loadScenario() {
@@ -245,6 +256,123 @@ export default function ScenarioDetailPage() {
     }
   };
 
+  const exportToPDF = async () => {
+    if (!scenario) return;
+    
+    setExporting(true);
+    
+    try {
+      const contentElement = document.getElementById('scenario-content');
+      if (!contentElement) {
+        throw new Error('내보낼 콘텐츠를 찾을 수 없습니다.');
+      }
+      
+      const canvas = await html2canvas(contentElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      const fileName = `토론시나리오_${scenario.title.substring(0, 20)}.pdf`;
+      pdf.save(fileName);
+      
+    } catch (error) {
+      console.error('PDF 내보내기 오류:', error);
+      alert('PDF 내보내기 중 오류가 발생했습니다.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportAIContentToPDF = async () => {
+    try {
+      setExporting(true);
+      
+      // AI 콘텐츠 섹션 요소 가져오기
+      const aiContentElement = document.getElementById('ai-generated-content');
+      
+      if (!aiContentElement) {
+        alert('AI 콘텐츠를 찾을 수 없습니다.');
+        setExporting(false);
+        return;
+      }
+      
+      // AI 콘텐츠가 숨겨져 있는 경우 표시
+      const wasHidden = !showAIContent;
+      if (wasHidden) {
+        setShowAIContent(true);
+        // DOM 업데이트를 위한 짧은 지연
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // html2canvas 설정
+      const canvas = await html2canvas(aiContentElement, {
+        scale: 2, // 더 높은 품질
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      // PDF 생성
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // 이미지 크기 계산
+      const imgWidth = 210; // A4 너비(mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // 파일 이름 설정
+      const fileName = `${scenario?.title || '시나리오'}_AI콘텐츠.pdf`;
+      pdf.save(fileName);
+      
+      // 원래 상태로 복원
+      if (wasHidden) {
+        setShowAIContent(false);
+      }
+      
+      setExporting(false);
+      
+    } catch (error) {
+      console.error('PDF 내보내기 오류:', error);
+      alert('PDF 생성 중 오류가 발생했습니다.');
+      setExporting(false);
+    }
+  };
+
+  const toggleAIContent = () => {
+    setShowAIContent(!showAIContent);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
@@ -281,7 +409,7 @@ export default function ScenarioDetailPage() {
               <h1 className="text-3xl font-bold">{scenario.title}</h1>
               <p className="mt-2 text-blue-100">{scenario.description}</p>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-3">
+            <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
               <Link href={`/session?id=${scenario.id}`}>
                 <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm">
                   토론 시작
@@ -298,6 +426,20 @@ export default function ScenarioDetailPage() {
               >
                 삭제
               </button>
+              <button 
+                onClick={toggleAIContent}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors shadow-sm"
+              >
+                {showAIContent ? 'AI 콘텐츠 닫기' : 'AI 콘텐츠 보기'}
+              </button>
+              <button 
+                onClick={exportAIContentToPDF}
+                disabled={exporting}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1"
+              >
+                <FileDown size={16} />
+                {exporting ? 'PDF 생성 중...' : 'AI 콘텐츠 저장'}
+              </button>
             </div>
           </div>
         </div>
@@ -305,101 +447,189 @@ export default function ScenarioDetailPage() {
 
       {/* 메인 콘텐츠 */}
       <div className="container mx-auto py-8 px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* 시나리오 기본 정보 */}
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-xl font-bold text-blue-800 mb-4">기본 정보</h2>
-              
-              <div className="mb-4">
-                <div className="text-sm font-medium text-gray-500 mb-1">주제</div>
-                <div className="bg-blue-50 p-3 rounded-md">
-                  <p className="text-gray-800">{scenario.topic}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">학년</div>
-                  <div className="bg-gray-100 p-2 rounded-md text-gray-800">
-                    {scenario.grade}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500 mb-1">교과</div>
-                  <div className="bg-gray-100 p-2 rounded-md text-gray-800">
-                    {scenario.subject}
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-medium text-gray-500 mb-1">생성일</div>
-                <div className="text-gray-800">
-                  {formatDate(scenario.createdAt)}
-                </div>
+        {showAIContent && (
+          <div className="mt-8 p-6 border border-gray-300 rounded-lg bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-indigo-700">AI 생성 콘텐츠</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={exportAIContentToPDF}
+                  disabled={exporting}
+                  className="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm flex items-center gap-1 hover:bg-indigo-700 disabled:bg-gray-400"
+                >
+                  {exporting ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      내보내는 중...
+                    </>
+                  ) : (
+                    <>
+                      <FaFilePdf />
+                      PDF 저장
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowAIContent(false)}
+                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300"
+                >
+                  숨기기
+                </button>
               </div>
             </div>
-            
-            {scenario.details?.materials && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-blue-800 mb-4">준비물</h2>
-                <ul className="list-disc pl-5 space-y-2">
-                  {scenario.details.materials.map((material, index) => (
-                    <li key={index} className="text-gray-700">{material}</li>
-                  ))}
-                </ul>
+            <div id="ai-generated-content" className="prose max-w-none">
+              <div className="mb-6">
+                <h4 className="text-lg font-medium text-gray-800 mb-2">배경 정보</h4>
+                <p className="text-gray-700 whitespace-pre-line">{scenario.details?.background}</p>
               </div>
-            )}
-          </div>
-          
-          {/* 토론 세부 내용 */}
-          <div className="md:col-span-2">
-            {scenario.details && (
-              <>
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                  <h2 className="text-xl font-bold text-blue-800 mb-4">토론 배경</h2>
-                  <p className="text-gray-700 whitespace-pre-line">{scenario.details.background}</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-green-50 rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-green-800 mb-4">찬성 입장</h2>
-                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.affirmative}</p>
-                  </div>
-                  
-                  <div className="bg-red-50 rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-red-800 mb-4">반대 입장</h2>
-                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.negative}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h4 className="text-lg font-medium text-green-700 mb-3">찬성 입장</h4>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
+                    <p className="whitespace-pre-line">{scenario.details?.affirmative}</p>
                   </div>
                 </div>
                 
-                <div className="bg-yellow-50 rounded-lg shadow p-6 mb-6">
-                  <h2 className="text-xl font-bold text-yellow-800 mb-4">교사 지도 노트</h2>
-                  <p className="text-gray-700 whitespace-pre-line">{scenario.details.teacherNotes}</p>
+                <div>
+                  <h4 className="text-lg font-medium text-red-700 mb-3">반대 입장</h4>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
+                    <p className="whitespace-pre-line">{scenario.details?.negative}</p>
+                  </div>
                 </div>
-                
-                {scenario.details.expectedOutcomes && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-blue-800 mb-4">기대 학습 성과</h2>
-                    <ul className="list-disc pl-5 space-y-2">
+              </div>
+              
+              <h4 className="text-lg font-medium text-yellow-700 mb-3">교사 지도 노트</h4>
+              <div className="bg-white p-3 rounded-md shadow-sm mb-6">
+                <p className="whitespace-pre-line">{scenario.details?.teacherNotes}</p>
+              </div>
+              
+              {scenario.details?.expectedOutcomes && (
+                <>
+                  <h4 className="text-lg font-medium text-blue-700 mb-3">기대 학습 성과</h4>
+                  <div className="bg-white p-3 rounded-md shadow-sm mb-6">
+                    <ul className="list-disc pl-5 space-y-1">
                       {scenario.details.expectedOutcomes.map((outcome, index) => (
-                        <li key={index} className="text-gray-700">{outcome}</li>
+                        <li key={index}>{outcome}</li>
                       ))}
                     </ul>
                   </div>
-                )}
-              </>
-            )}
+                </>
+              )}
+              
+              {scenario.details?.materials && (
+                <>
+                  <h4 className="text-lg font-medium text-blue-700 mb-3">준비물</h4>
+                  <div className="bg-white p-3 rounded-md shadow-sm">
+                    <ul className="list-disc pl-5 space-y-1">
+                      {scenario.details.materials.map((material, index) => (
+                        <li key={index}>{material}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-        
-        <div className="mt-8 text-center">
-          <Link href="/scenarios">
-            <button className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 shadow transition-colors">
-              시나리오 목록으로 돌아가기
-            </button>
-          </Link>
+        )}
+      
+        <div id="scenario-content">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 시나리오 기본 정보 */}
+            <div className="md:col-span-1">
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-xl font-bold text-blue-800 mb-4">기본 정보</h2>
+                
+                <div className="mb-4">
+                  <div className="text-sm font-medium text-gray-500 mb-1">주제</div>
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-gray-800">{scenario.topic}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-500 mb-1">학년</div>
+                    <div className="bg-gray-100 p-2 rounded-md text-gray-800">
+                      {scenario.grade}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500 mb-1">교과</div>
+                    <div className="bg-gray-100 p-2 rounded-md text-gray-800">
+                      {scenario.subject}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">생성일</div>
+                  <div className="text-gray-800">
+                    {formatDate(scenario.createdAt)}
+                  </div>
+                </div>
+              </div>
+              
+              {scenario.details?.materials && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-bold text-blue-800 mb-4">준비물</h2>
+                  <ul className="list-disc pl-5 space-y-2">
+                    {scenario.details.materials.map((material, index) => (
+                      <li key={index} className="text-gray-700">{material}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            {/* 토론 세부 내용 */}
+            <div className="md:col-span-2">
+              {scenario.details && (
+                <>
+                  <div className="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 className="text-xl font-bold text-blue-800 mb-4">토론 배경</h2>
+                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.background}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-green-50 rounded-lg shadow p-6">
+                      <h2 className="text-xl font-bold text-green-800 mb-4">찬성 입장</h2>
+                      <p className="text-gray-700 whitespace-pre-line">{scenario.details.affirmative}</p>
+                    </div>
+                    
+                    <div className="bg-red-50 rounded-lg shadow p-6">
+                      <h2 className="text-xl font-bold text-red-800 mb-4">반대 입장</h2>
+                      <p className="text-gray-700 whitespace-pre-line">{scenario.details.negative}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg shadow p-6 mb-6">
+                    <h2 className="text-xl font-bold text-yellow-800 mb-4">교사 지도 노트</h2>
+                    <p className="text-gray-700 whitespace-pre-line">{scenario.details.teacherNotes}</p>
+                  </div>
+                  
+                  {scenario.details.expectedOutcomes && (
+                    <div className="bg-white rounded-lg shadow p-6">
+                      <h2 className="text-xl font-bold text-blue-800 mb-4">기대 학습 성과</h2>
+                      <ul className="list-disc pl-5 space-y-2">
+                        {scenario.details.expectedOutcomes.map((outcome, index) => (
+                          <li key={index} className="text-gray-700">{outcome}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <Link href="/scenarios">
+              <button className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 shadow transition-colors">
+                시나리오 목록으로 돌아가기
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

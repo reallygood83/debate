@@ -68,12 +68,13 @@ export async function POST(request: NextRequest) {
 // 토론 주제 목록 조회 API
 export async function GET(request: NextRequest) {
   try {
-    // 쿼리 파라미터
+    // URL 검색 매개변수 가져오기
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const query = searchParams.get('q') || '';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const query = searchParams.get('query') || '';
     const subject = searchParams.get('subject') || '';
+    const grade = searchParams.get('grade') || '';
     
     // 페이지네이션 계산
     const skip = (page - 1) * limit;
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
     // MongoDB 컬렉션 가져오기
     const collection = await getCollection('topics');
     
-    // 검색 쿼리 구성
+    // 검색 필터 구성
     const filter: any = {};
     
     if (query) {
@@ -91,11 +92,18 @@ export async function GET(request: NextRequest) {
       ];
     }
     
-    if (subject && subject !== 'all') {
+    if (subject) {
       filter.subjects = { $in: [subject] };
     }
     
-    // 토픽 가져오기
+    if (grade && grade !== '전체') {
+      filter.grade = grade;
+    }
+    
+    // 토픽 총 개수 조회
+    const totalTopics = await collection.countDocuments(filter);
+    
+    // 토픽 조회
     const topics = await collection
       .find(filter)
       .sort({ createdAt: -1 })
@@ -103,26 +111,27 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .toArray();
     
-    // 전체 토픽 수 조회
-    const total = await collection.countDocuments(filter);
-    
-    // 페이지네이션 정보 추가
-    const totalPages = Math.ceil(total / limit);
-    
+    // 응답 반환
     return NextResponse.json({
-      topics,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages
+      success: true,
+      data: {
+        topics,
+        pagination: {
+          total: totalTopics,
+          page,
+          limit,
+          totalPages: Math.ceil(totalTopics / limit)
+        }
       }
     });
     
   } catch (error) {
     console.error('토론 주제 조회 오류:', error);
     return NextResponse.json(
-      { message: '토론 주제를 조회하는 중 오류가 발생했습니다.' }, 
+      { 
+        error: '토론 주제 조회 중 오류가 발생했습니다.',
+        details: error instanceof Error ? error.message : '알 수 없는 오류'
+      },
       { status: 500 }
     );
   }

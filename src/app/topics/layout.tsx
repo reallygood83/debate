@@ -1,9 +1,8 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-// 클라이언트 컴포넌트로 변환
-'use client';
 
 export default function TopicsLayout({
   children,
