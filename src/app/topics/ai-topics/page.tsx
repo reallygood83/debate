@@ -98,13 +98,7 @@ export default function AITopicsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center mb-6">
-        <Link href="/topics" className="mr-4">
-          <button className="flex items-center text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="h-5 w-5 mr-1" />
-            토론 주제 목록으로
-          </button>
-        </Link>
+      <div className="mb-6">
         <h1 className="text-3xl font-bold">AI 토론 주제 생성</h1>
       </div>
       
