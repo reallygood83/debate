@@ -4,6 +4,7 @@ export interface Activity {
   durationMinutes: number;
   description: string;
   teacherPrompts: string[];
+  mediaUrl?: string;
 }
 
 export interface StageSection {

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Scenario } from '@/types/scenario';
 import { getScenarioById } from '@/utils/scenarioUtils';
 import { useDebate } from '@/context/DebateContext';
+import MediaEmbed from '@/components/MediaEmbed';
+import { Plus, Minus } from 'lucide-react';
 
 // 기본 시나리오 정의
 const DEFAULT_SCENARIO: Scenario = {
@@ -106,13 +108,18 @@ const DEFAULT_SCENARIO: Scenario = {
 // 타이머 컴포넌트
 function Timer({ 
   initialMinutes, 
-  onTimeEnd 
+  onTimeEnd,
+  onTimeUpdate,
+  allowCustomTime = false
 }: { 
   initialMinutes: number; 
   onTimeEnd: () => void;
+  onTimeUpdate?: (minutes: number) => void;
+  allowCustomTime?: boolean;
 }) {
   const [seconds, setSeconds] = useState(initialMinutes * 60);
   const [isActive, setIsActive] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState(initialMinutes);
   
   // 타이머 포맷 함수
   const formatTime = () => {
@@ -128,8 +135,19 @@ function Timer({
   
   // 타이머 리셋
   const resetTimer = () => {
-    setSeconds(initialMinutes * 60);
+    setSeconds(customMinutes * 60);
     setIsActive(false);
+  };
+
+  // 시간 조절 함수
+  const adjustTime = (amount: number) => {
+    const newMinutes = Math.max(1, customMinutes + amount);
+    setCustomMinutes(newMinutes);
+    setSeconds(newMinutes * 60);
+    
+    if (onTimeUpdate) {
+      onTimeUpdate(newMinutes);
+    }
   };
   
   // 타이머 효과
@@ -154,22 +172,41 @@ function Timer({
   }, [isActive, seconds, onTimeEnd]);
   
   return (
-    <div className="flex flex-col items-center">
-      <div className={`text-4xl font-bold mb-3 ${seconds < 30 ? 'text-red-600' : 'text-blue-700'}`}>
-        {formatTime()}
-      </div>
-      <div className="flex gap-2">
+    <div className="w-full max-w-md">
+      {allowCustomTime && (
+        <div className="flex justify-center items-center mb-4 gap-4">
+          <button 
+            onClick={() => adjustTime(-1)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center"
+            disabled={customMinutes <= 1}
+          >
+            <Minus size={16} />
+          </button>
+          <span className="text-gray-700 font-medium">{customMinutes}분</span>
+          <button 
+            onClick={() => adjustTime(1)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      )}
+      
+      <div className="text-4xl font-bold text-center mb-3">{formatTime()}</div>
+      <div className="flex justify-center space-x-4">
         <button
           onClick={toggleTimer}
-          className={`px-3 py-1 rounded-md ${isActive ? 'bg-yellow-500' : 'bg-green-500'} text-white`}
+          className={`px-5 py-2 rounded-md ${
+            isActive ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'
+          } text-white transition-colors`}
         >
           {isActive ? '일시정지' : '시작'}
         </button>
         <button
           onClick={resetTimer}
-          className="px-3 py-1 bg-gray-500 text-white rounded-md"
+          className="px-5 py-2 rounded-md bg-gray-500 hover:bg-gray-600 text-white transition-colors"
         >
-          리셋
+          초기화
         </button>
       </div>
     </div>
@@ -180,14 +217,17 @@ function Timer({
 function SessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const scenarioId = searchParams.get('scenarioId');
-  const { setActiveTopic, isDebateActive, setIsDebateActive } = useDebate();
+  const scenarioId = searchParams.get('id');
+  const { activeTopic, setActiveTopic, isDebateActive, setIsDebateActive } = useDebate();
   
-  const [scenario, setScenario] = useState<Scenario | null>(null);
-  const [currentStageIndex, setCurrentStageIndex] = useState(0); // 0, 1, 2 (stage1, stage2, stage3)
+  const [scenario, setScenario] = useState<Scenario>(DEFAULT_SCENARIO);
+  const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showTopicInput, setShowTopicInput] = useState(false);
+  const [customTopic, setCustomTopic] = useState('');
   const [showPrompts, setShowPrompts] = useState(false);
+  const [activityDuration, setActivityDuration] = useState<Record<string, number>>({});
   
   // 주제 입력 관련 상태 추가
   const [customTopic, setCustomTopic] = useState('');
@@ -321,6 +361,22 @@ function SessionContent() {
     router.push('/');
   };
 
+  // 활동 시간 업데이트 함수
+  const updateActivityDuration = (minutes: number) => {
+    if (!currentActivity) return;
+    
+    setActivityDuration(prev => ({
+      ...prev,
+      [currentActivity.id]: minutes
+    }));
+  };
+
+  // 현재 활동의 지속 시간 가져오기 (사용자 조정 시간 or 기본 시간)
+  const getCurrentActivityDuration = () => {
+    if (!currentActivity) return 10;
+    return activityDuration[currentActivity.id] || currentActivity.durationMinutes;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -441,9 +497,20 @@ function SessionContent() {
               </h2>
               <p className="text-gray-700 mb-4">{currentActivity.description}</p>
               
+              {/* 미디어 콘텐츠 임베드 (있는 경우에만 표시) */}
+              {currentActivity.mediaUrl && (
+                <div className="mb-6">
+                  <MediaEmbed 
+                    url={currentActivity.mediaUrl} 
+                    title={currentActivity.title}
+                    className="mt-3 max-w-3xl mx-auto"
+                  />
+                </div>
+              )}
+              
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">
-                  소요 시간: {currentActivity.durationMinutes}분
+                  소요 시간: {getCurrentActivityDuration()}분
                 </span>
                 <button
                   onClick={() => setShowPrompts(!showPrompts)}
@@ -469,8 +536,10 @@ function SessionContent() {
           {/* 타이머 */}
           <div className="flex flex-col items-center mb-6 py-4 border-y border-gray-200">
             <Timer 
-              initialMinutes={currentActivity?.durationMinutes || 10} 
+              initialMinutes={getCurrentActivityDuration()}
               onTimeEnd={handleTimeEnd}
+              onTimeUpdate={updateActivityDuration}
+              allowCustomTime={true}
             />
           </div>
           
@@ -492,6 +561,70 @@ function SessionContent() {
             </button>
           </div>
         </div>
+
+        {/* 시나리오 세부 정보 표시 (있는 경우) */}
+        {scenario?.scenarioDetails && (
+          <div className="bg-white shadow-lg rounded-lg p-6 mt-6">
+            <details className="group">
+              <summary className="flex justify-between items-center cursor-pointer list-none">
+                <h2 className="text-xl font-semibold text-gray-800">교사 참고 자료</h2>
+                <span className="text-blue-600 group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
+              </summary>
+              <div className="mt-4 space-y-4">
+                {scenario.scenarioDetails.background && (
+                  <div>
+                    <h3 className="font-medium text-gray-800 mb-2">배경 정보</h3>
+                    <p className="text-gray-700">{scenario.scenarioDetails.background}</p>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {scenario.scenarioDetails.proArguments && scenario.scenarioDetails.proArguments.length > 0 && (
+                    <div className="border border-green-200 rounded-md p-4 bg-green-50">
+                      <h3 className="font-medium text-gray-800 mb-2">찬성 논점</h3>
+                      <ul className="list-disc pl-5">
+                        {scenario.scenarioDetails.proArguments.map((arg, index) => (
+                          <li key={index} className="text-gray-700 mb-1">{arg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {scenario.scenarioDetails.conArguments && scenario.scenarioDetails.conArguments.length > 0 && (
+                    <div className="border border-red-200 rounded-md p-4 bg-red-50">
+                      <h3 className="font-medium text-gray-800 mb-2">반대 논점</h3>
+                      <ul className="list-disc pl-5">
+                        {scenario.scenarioDetails.conArguments.map((arg, index) => (
+                          <li key={index} className="text-gray-700 mb-1">{arg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                
+                {scenario.scenarioDetails.teacherTips && (
+                  <div className="border border-blue-200 rounded-md p-4 bg-blue-50">
+                    <h3 className="font-medium text-gray-800 mb-2">교사 팁</h3>
+                    <p className="text-gray-700">{scenario.scenarioDetails.teacherTips}</p>
+                  </div>
+                )}
+                
+                {scenario.scenarioDetails.keyQuestions && scenario.scenarioDetails.keyQuestions.length > 0 && (
+                  <div>
+                    <h3 className="font-medium text-gray-800 mb-2">핵심 질문</h3>
+                    <ul className="list-disc pl-5">
+                      {scenario.scenarioDetails.keyQuestions.map((q, index) => (
+                        <li key={index} className="text-gray-700 mb-1">{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );
