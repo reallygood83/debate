@@ -48,7 +48,10 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-3">토론 시나리오</h3>
-              <p className="text-gray-600 mb-4">다양한 주제와 교과별 맞춤형 토론 시나리오를 제공하여 수업에 바로 활용하세요.</p>
+              <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
+                다양한 주제와 교과별 맞춤형 토론 시나리오를 생성하여<br />
+                수업에 바로 활용할 수 있습니다.
+              </p>
               <Link href="/scenarios" className="text-blue-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
@@ -64,7 +67,10 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-3">토론 진행</h3>
-              <p className="text-gray-600 mb-4">단계별 가이드와 시간 관리 기능으로 효과적인 토론 수업을 쉽게 진행하세요.</p>
+              <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
+                단계별 가이드와 시간 관리 기능으로<br />
+                효과적인 토론 수업을 쉽게 진행할 수 있습니다.
+              </p>
               <Link href="/session" className="text-green-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
@@ -80,7 +86,10 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold mb-3">학생 피드백</h3>
-              <p className="text-gray-600 mb-4">AI 기술로 학생들의 토론 참여에 개인화된 맞춤형 피드백을 효율적으로 제공하세요.</p>
+              <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
+                AI 기술로 학생들의 토론 참여에 맞춤형 피드백을<br />
+                효율적으로 제공하여 학습 효과를 높입니다.
+              </p>
               <a href="https://lovabledebate25.vercel.app" target="_blank" rel="noopener noreferrer" className="text-purple-600 font-medium inline-flex items-center">
                 자세히 보기
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
