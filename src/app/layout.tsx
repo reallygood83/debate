@@ -72,9 +72,9 @@ export default function RootLayout({
           <footer className="bg-gray-800 text-white py-8 mt-auto">
           <div className="container mx-auto px-6">
             <div className="text-center">
-              <p className="mb-2">© 2025 토론 튜터 - 초등 토론 교육 지원 도구</p>
+              <p className="mb-2">© 2025 토론 튜터 - 초등 토론 수업 지원 도구</p>
               <p className="text-gray-400 text-sm">
-                경기초등토론교육모형 기반 · 교실 토론 활동 지원 애플리케이션
+                안양 박달초 김문정 · 교실 토론 활동 지원 애플리케이션
               </p>
             </div>
           </div>
