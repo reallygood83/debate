@@ -515,31 +515,18 @@ function SessionContent() {
               </h2>
               <p className="text-gray-700 mb-4">{currentActivity.description}</p>
               
-              {/* 미디어 콘텐츠 임베드 (있는 경우에만 표시) */}
-              {getCurrentActivityMediaUrl() && (
-                <div className="mb-6">
-                  <MediaEmbed 
-                    url={getCurrentActivityMediaUrl() || ''} 
-                    title={currentActivity.title}
-                    className="mt-3 max-w-3xl mx-auto"
-                  />
-                </div>
-              )}
-              
               {/* 미디어 URL 입력 UI */}
-              <div className="mb-4">
+              <div className="mb-6 flex justify-center">
                 {!showMediaInput ? (
                   <button
                     onClick={() => setShowMediaInput(true)}
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center px-4 py-2 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors shadow-sm mx-auto"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    {getCurrentActivityMediaUrl() ? '미디어 URL 변경' : '미디어 URL 추가'}
+                    <span className="mr-2 text-lg">🎬</span>
+                    {getCurrentActivityMediaUrl() ? '미디어 자료 변경' : '유튜브/이미지 미디어 자료 추가'}
                   </button>
                 ) : (
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-2 border p-3 rounded-md bg-blue-50 w-full">
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
@@ -547,10 +534,11 @@ function SessionContent() {
                         onChange={(e) => setMediaInput(e.target.value)}
                         placeholder="유튜브 URL 또는 이미지 URL을 입력하세요"
                         className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                        autoFocus
                       />
                       <button
                         onClick={handleSaveMediaUrl}
-                        className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 whitespace-nowrap"
                       >
                         저장
                       </button>
@@ -567,6 +555,17 @@ function SessionContent() {
                   </div>
                 )}
               </div>
+              
+              {/* 미디어 콘텐츠 임베드 (있는 경우에만 표시) */}
+              {getCurrentActivityMediaUrl() && (
+                <div className="mb-6">
+                  <MediaEmbed 
+                    url={getCurrentActivityMediaUrl() || ''} 
+                    title={currentActivity.title}
+                    className="mt-3 max-w-3xl mx-auto"
+                  />
+                </div>
+              )}
               
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">
