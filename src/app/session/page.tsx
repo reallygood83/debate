@@ -228,6 +228,9 @@ function SessionContent() {
   const [customTopic, setCustomTopic] = useState('');
   const [showPrompts, setShowPrompts] = useState(false);
   const [activityDuration, setActivityDuration] = useState<Record<string, number>>({});
+  const [activityMedia, setActivityMedia] = useState<Record<string, string>>({});
+  const [mediaInput, setMediaInput] = useState('');
+  const [showMediaInput, setShowMediaInput] = useState(false);
   
   // 현재 단계와 활동을 배열로 변환
   const getStagesAndActivities = useCallback(() => {
@@ -373,6 +376,25 @@ function SessionContent() {
     return activityDuration[currentActivity.id] || currentActivity.durationMinutes;
   };
 
+  // 미디어 URL 저장 함수
+  const handleSaveMediaUrl = () => {
+    if (!currentActivity || !mediaInput.trim()) return;
+    
+    setActivityMedia(prev => ({
+      ...prev,
+      [currentActivity.id]: mediaInput.trim()
+    }));
+    
+    setMediaInput('');
+    setShowMediaInput(false);
+  };
+
+  // 현재 활동의 미디어 URL 가져오기
+  const getCurrentActivityMediaUrl = () => {
+    if (!currentActivity) return null;
+    return activityMedia[currentActivity.id] || currentActivity.mediaUrl;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -494,15 +516,57 @@ function SessionContent() {
               <p className="text-gray-700 mb-4">{currentActivity.description}</p>
               
               {/* 미디어 콘텐츠 임베드 (있는 경우에만 표시) */}
-              {currentActivity.mediaUrl && (
+              {getCurrentActivityMediaUrl() && (
                 <div className="mb-6">
                   <MediaEmbed 
-                    url={currentActivity.mediaUrl} 
+                    url={getCurrentActivityMediaUrl() || ''} 
                     title={currentActivity.title}
                     className="mt-3 max-w-3xl mx-auto"
                   />
                 </div>
               )}
+              
+              {/* 미디어 URL 입력 UI */}
+              <div className="mb-4">
+                {!showMediaInput ? (
+                  <button
+                    onClick={() => setShowMediaInput(true)}
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    {getCurrentActivityMediaUrl() ? '미디어 URL 변경' : '미디어 URL 추가'}
+                  </button>
+                ) : (
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={mediaInput}
+                        onChange={(e) => setMediaInput(e.target.value)}
+                        placeholder="유튜브 URL 또는 이미지 URL을 입력하세요"
+                        className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                      />
+                      <button
+                        onClick={handleSaveMediaUrl}
+                        className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      >
+                        저장
+                      </button>
+                      <button
+                        onClick={() => setShowMediaInput(false)}
+                        className="px-3 py-2 bg-gray-200 text-gray-800 text-sm rounded hover:bg-gray-300"
+                      >
+                        취소
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      예: https://www.youtube.com/watch?v=VIDEO_ID 또는 https://example.com/image.jpg
+                    </p>
+                  </div>
+                )}
+              </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">
