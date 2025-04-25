@@ -18,12 +18,17 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/scenarios/create">
               <button className="px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-colors shadow-md">
-                시나리오 만들기
+                토론 시나리오 생성
               </button>
             </Link>
-            <Link href="/about">
-              <button className="px-8 py-3 bg-white text-blue-600 rounded-full font-bold hover:bg-gray-100 transition-colors shadow-md border border-blue-200">
-                사용 방법 보기
+            <Link href="/topics/ai-topics">
+              <button className="px-8 py-3 bg-green-600 text-white rounded-full font-bold hover:bg-green-700 transition-colors shadow-md">
+                토론 주제 생성
+              </button>
+            </Link>
+            <Link href="https://lovabledebate25.vercel.app/">
+              <button className="px-8 py-3 bg-purple-600 text-white rounded-full font-bold hover:bg-purple-700 transition-colors shadow-md">
+                학생 맞춤형 피드백
               </button>
             </Link>
           </div>
