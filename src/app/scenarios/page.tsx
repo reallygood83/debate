@@ -322,7 +322,7 @@ export default function ScenariosPage() {
     setIsDebateActive(true);
     
     // 토론 세션 페이지로 이동
-    router.push(`/session?scenarioId=${scenario.id}`);
+    router.push(`/session?id=${scenario.id}`);
   };
   
   if (loading) {
