@@ -229,10 +229,6 @@ function SessionContent() {
   const [showPrompts, setShowPrompts] = useState(false);
   const [activityDuration, setActivityDuration] = useState<Record<string, number>>({});
   
-  // 주제 입력 관련 상태 추가
-  const [customTopic, setCustomTopic] = useState('');
-  const [showTopicInput, setShowTopicInput] = useState(false);
-  
   // 현재 단계와 활동을 배열로 변환
   const getStagesAndActivities = useCallback(() => {
     if (!scenario) return { stages: [], currentActivity: null, currentActiveStage: null };
