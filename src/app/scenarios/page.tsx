@@ -455,194 +455,190 @@ export default function ScenariosPage() {
   }
   
   return (
-    <div className="container mx-auto p-6">
-      {/* 토스트 메시지 표시 */}
-      {toast.show && (
-        <div 
-          className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transition-opacity duration-300 ${
-            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white`}
-        >
-          <div className="flex items-center">
-            {toast.type === 'success' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
-            <span>{toast.message}</span>
+    <div>
+      {/* 기존 내용 */}
+      <div className="container mx-auto px-4 py-8">
+        
+        {/* 토스트 메시지 */}
+        {toast.show && (
+          <div 
+            className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transition-all ${
+              toast.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}
+          >
+            {toast.message}
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-blue-700">토론 시나리오</h1>
-        <Link
-          href="/scenarios/create"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          새 시나리오 만들기
-        </Link>
-      </div>
-      
-      {/* 데이터 소스 설명 */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <p className="text-blue-800">
-          <span className="font-bold">내 로컬 토론자료</span>: 현재 브라우저에 저장된 시나리오입니다. 다른 기기나 브라우저에서는 확인할 수 없습니다.
-        </p>
-        <p className="text-blue-800 mt-2">
-          <span className="font-bold">서버 공유 토론자료</span>: 모든 사용자가 공유할 수 있는 서버에 저장된 시나리오입니다. 누구나 이 자료를 볼 수 있고 사용할 수 있습니다.
-        </p>
-      </div>
-      
-      {/* 데이터 소스 전환 버튼 */}
-      <div className="mb-6 flex items-center">
-        <div className="rounded-md bg-gray-200 p-1 flex">
-          <button
-            onClick={() => {
-              setShowServerData(false);
-              setError(null);
-              // 무한 로딩 문제를 방지하기 위해 서버 데이터 로딩 상태도 리셋
-              setServerDataLoading(false);
-            }}
-            className={`px-4 py-2 rounded-md font-medium text-blue-800 ${!showServerData ? 'bg-white shadow-sm' : 'hover:bg-blue-50'} transition-colors`}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>토론 시나리오</h1>
+          <Link
+            href="/scenarios/create"
+            className="lovable-btn-primary px-4 py-2 rounded-md"
           >
-            내 로컬 토론자료
-          </button>
-          <button
-            onClick={() => {
-              if (!serverDataLoading) {
-                loadServerScenarios();
-              }
-            }}
-            disabled={serverDataLoading}
-            className={`px-4 py-2 rounded-md font-medium ${showServerData ? 'bg-white shadow-sm' : 'hover:bg-blue-50'} ${serverDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {serverDataLoading ? (
-              <span className="flex items-center">
-                <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                로딩 중...
-              </span>
-            ) : '서버 공유 토론자료'}
-          </button>
+            새 시나리오 만들기
+          </Link>
         </div>
         
-        {/* 로딩 중 취소 버튼 추가 */}
-        {serverDataLoading && (
-          <button
-            onClick={() => {
-              setServerDataLoading(false);
-              setShowServerData(false);
-            }}
-            className="ml-2 px-3 py-2 rounded-md bg-red-500 text-white hover:bg-red-600 font-medium"
-          >
-            취소
-          </button>
-        )}
-
-        {/* 새로고침 버튼은 로딩 중이 아닐 때만 표시 */}
-        {showServerData && !serverDataLoading && (
-          <button
-            onClick={loadServerScenarios}
-            disabled={serverDataLoading}
-            className="ml-2 p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="새로고침"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        )}
-      </div>
-      
-      {/* 오류 메시지 - 더 눈에 띄게 개선 */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-medium">{error}</span>
-          </div>
-          {serverDataLoading && (
-            <div className="mt-3 flex">
-              <button 
-                onClick={() => {
-                  setServerDataLoading(false);
-                  setShowServerData(false);
-                }} 
-                className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                로딩 취소하고 내 토론자료로 전환하기
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      
-      {displayScenarios.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <p className="text-xl text-gray-600 mb-4">저장된 시나리오가 없습니다.</p>
-          <p className="text-gray-500">
-            시나리오를 생성하려면 '새 시나리오 만들기' 버튼을 클릭하세요.
+        {/* 데이터 소스 설명 */}
+        <div className="mb-4 p-4 rounded-lg border border-gray-200" style={{ 
+          backgroundColor: 'var(--color-accent)',
+          color: 'var(--color-text)'
+        }}>
+          <p className="mb-2">
+            <span className="font-bold" style={{ color: 'var(--color-primary)' }}>내 로컬 토론자료</span>: 현재 브라우저에 저장된 시나리오입니다. 다른 기기나 브라우저에서는 확인할 수 없습니다.
+          </p>
+          <p>
+            <span className="font-bold" style={{ color: 'var(--color-primary)' }}>서버 공유 토론자료</span>: 모든 사용자가 공유할 수 있는 서버에 저장된 시나리오입니다. 누구나 이 자료를 볼 수 있고 사용할 수 있습니다.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayScenarios.map(scenario => (
-            <div key={scenario.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6">
-                <h2 className="text-xl font-bold mb-2 text-gray-800">{scenario.title}</h2>
-                <div className="mb-4 text-sm text-gray-500">
-                  <p>총 시간: {scenario.totalDurationMinutes}분</p>
-                  <p>생성 날짜: {formatDate(scenario.createdAt)}</p>
-                  {scenario.aiGenerated && (
-                    <p className="text-purple-600 font-medium mt-1">AI 생성 시나리오</p>
-                  )}
+        
+        {/* 데이터 소스 전환 버튼 */}
+        <div className="mb-6 flex items-center">
+          <div className="rounded-md bg-gray-200 p-1 flex">
+            <button
+              onClick={() => {
+                setShowServerData(false);
+                setError(null);
+                // 무한 로딩 문제를 방지하기 위해 서버 데이터 로딩 상태도 리셋
+                setServerDataLoading(false);
+              }}
+              className={`px-4 py-2 rounded-md font-medium ${!showServerData ? 'bg-white shadow-sm text-primary' : 'hover:bg-white hover:text-primary text-gray-700'} transition-colors`}
+            >
+              내 로컬 토론자료
+            </button>
+            <button
+              onClick={() => {
+                if (!serverDataLoading) {
+                  loadServerScenarios();
+                }
+              }}
+              disabled={serverDataLoading}
+              className={`px-4 py-2 rounded-md font-medium ${showServerData ? 'bg-white shadow-sm text-primary' : 'hover:bg-white hover:text-primary text-gray-700'} ${serverDataLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {serverDataLoading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                  로딩 중...
+                </span>
+              ) : '서버 공유 토론자료'}
+            </button>
+          </div>
+          
+          {/* 로딩 중 취소 버튼 추가 */}
+          {serverDataLoading && (
+            <button
+              onClick={() => {
+                setServerDataLoading(false);
+                setShowServerData(false);
+              }}
+              className="ml-2 px-3 py-2 rounded-md bg-primary text-white hover:bg-primary-dark font-medium"
+            >
+              취소
+            </button>
+          )}
+
+          {/* 새로고침 버튼은 로딩 중이 아닐 때만 표시 */}
+          {showServerData && !serverDataLoading && (
+            <button
+              onClick={loadServerScenarios}
+              disabled={serverDataLoading}
+              className="ml-2 p-2 rounded-md bg-primary text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="새로고침"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {/* 오류 메시지 - 더 눈에 띄게 개선 */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium">{error}</span>
+            </div>
+            {serverDataLoading && (
+              <div className="mt-3 flex">
+                <button 
+                  onClick={() => {
+                    setServerDataLoading(false);
+                    setShowServerData(false);
+                  }} 
+                  className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  로딩 취소하고 내 토론자료로 전환하기
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {displayScenarios.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-xl text-gray-600 mb-4">저장된 시나리오가 없습니다.</p>
+            <p className="text-gray-500">
+              시나리오를 생성하려면 '새 시나리오 만들기' 버튼을 클릭하세요.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayScenarios.map(scenario => (
+              <div key={scenario.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold mb-2 text-gray-800">{scenario.title}</h2>
+                  <div className="mb-4 text-sm text-gray-500">
+                    <p>총 시간: {scenario.totalDurationMinutes}분</p>
+                    <p>생성 날짜: {formatDate(scenario.createdAt)}</p>
+                    {scenario.aiGenerated && (
+                      <p className="text-purple-600 font-medium mt-1">AI 생성 시나리오</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between mt-4">
+                    <button
+                      onClick={() => router.push(`/scenarios/${scenario.id}`)}
+                      className="text-primary hover:text-primary-dark"
+                    >
+                      상세 보기
+                    </button>
+                    
+                    <button
+                      onClick={() => showServerData 
+                        ? handleDeleteServerScenario(scenario.id) 
+                        : handleDeleteLocalScenario(scenario.id)
+                      }
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
                 
-                <div className="flex justify-between mt-4">
+                <div className="bg-gray-100 p-4 flex justify-between">
                   <button
-                    onClick={() => router.push(`/scenarios/${scenario.id}`)}
-                    className="text-blue-600 hover:text-blue-800"
+                    onClick={() => handleDebateStart(scenario)}
+                    className="lovable-btn-primary px-3 py-1 rounded-md"
                   >
-                    상세 보기
+                    토론 시작
                   </button>
                   
-                  <button
-                    onClick={() => showServerData 
-                      ? handleDeleteServerScenario(scenario.id) 
-                      : handleDeleteLocalScenario(scenario.id)
-                    }
-                    className="text-red-600 hover:text-red-800"
+                  <Link
+                    href={`/scenarios/edit/${scenario.id}`}
+                    className="px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600"
                   >
-                    삭제
-                  </button>
+                    수정
+                  </Link>
                 </div>
               </div>
-              
-              <div className="bg-gray-100 p-4 flex justify-between">
-                <button
-                  onClick={() => handleDebateStart(scenario)}
-                  className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
-                >
-                  토론 시작
-                </button>
-                
-                <Link
-                  href={`/scenarios/edit/${scenario.id}`}
-                  className="px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                >
-                  수정
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

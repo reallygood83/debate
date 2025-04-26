@@ -5,9 +5,87 @@
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
+  
+  /* LovableDebate 브랜드 색상 */
+  --color-primary: #ee5c5c;      /* 코랄 레드 (메인 하트 색상) */
+  --color-primary-light: #f48484; /* 밝은 코랄 색상 */
+  --color-primary-dark: #d04747;  /* 어두운 코랄 색상 */
+  --color-text: #333333;          /* 차콜 그레이 (로고 텍스트) */
+  --color-text-light: #666666;    /* 밝은 텍스트 색상 */
+  --color-background: #f9f9f9;    /* 배경 색상 */
+  --color-accent: #ffe8e8;        /* 엑센트 색상 (하트 테마) */
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  color: var(--color-text);
+  background: var(--color-background);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+/* 커스텀 컴포넌트 스타일 */
+.lovable-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300;
+  border: 1px solid rgba(238, 92, 92, 0.1);
+}
+
+.lovable-card:hover {
+  @apply shadow-lg;
+  transform: translateY(-2px);
+  border-color: rgba(238, 92, 92, 0.3);
+}
+
+.lovable-btn-primary {
+  @apply px-4 py-2 rounded-md font-medium text-white transition-colors;
+  background-color: var(--color-primary);
+}
+
+.lovable-btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.lovable-btn-secondary {
+  @apply px-4 py-2 rounded-md font-medium transition-colors;
+  color: var(--color-primary);
+  background-color: white;
+  border: 1px solid var(--color-primary);
+}
+
+.lovable-btn-secondary:hover {
+  background-color: var(--color-accent);
+}
+
+.section-title {
+  @apply text-2xl font-bold mb-4;
+  color: var(--color-text);
+  position: relative;
+  padding-left: 15px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 20px;
+  background-color: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* 하트 모양 bulletpoint 스타일 */
+.lovable-list {
+  @apply space-y-2;
+}
+
+.lovable-list li {
+  @apply pl-6 relative;
+}
+
+.lovable-list li::before {
+  content: '♥';
+  @apply absolute left-0 text-sm;
+  color: var(--color-primary);
+  top: 2px;
 } 

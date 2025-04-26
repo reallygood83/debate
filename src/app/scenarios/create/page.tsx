@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { ScenarioFormData } from '@/types/scenario';
 import { createNewScenario, saveScenario } from '@/utils/scenarioUtils';
 
@@ -234,262 +236,224 @@ export default function CreateScenarioPage() {
   };
   
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-blue-700">새 토론 시나리오 만들기</h1>
+    <div className="bg-gray-50">
+      <div className="container mx-auto p-6">
+        <Link href="/scenarios" className="lovable-btn-secondary inline-flex items-center mb-4">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          시나리오 목록으로
+        </Link>
+        
+        <h1 className="section-title text-3xl font-bold mb-6" style={{ color: 'var(--color-text)' }}>새 토론 시나리오 생성</h1>
+        <p className="text-gray-600 mt-2">학년, 교과, 주제에 맞는 맞춤형 토론 시나리오를 생성합니다.</p>
+      </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-        <div className="mb-6 flex justify-end">
-          <button
-            type="button"
-            onClick={generateWithAI}
-            disabled={isGenerating}
-            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300"
-          >
-            {isGenerating ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                AI가 생성 중...
-              </>
-            ) : (
-              <>
-                <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                AI로 자동 생성
-              </>
-            )}
-          </button>
-        </div>
-        
-        {/* AI 생성 상태 표시 */}
-        {aiGenerationStatus === 'success' && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700">
-            AI가 생성한 시나리오가 적용되었습니다. 내용을 검토하고 필요시 수정해주세요.
-          </div>
-        )}
-        
-        {aiGenerationStatus === 'error' && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-            AI 시나리오 생성 중 오류가 발생했습니다. 다시 시도해주세요.
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-gray-700 font-medium mb-2">
-              토론 주제
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="예: 초등학교에 휴대폰을 가지고 와야 한다"
-              className={`w-full p-3 border rounded-md ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
-            />
-            {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label htmlFor="grade" className="block text-gray-700 font-medium mb-2">
-                대상 학년
-              </label>
-              <select
-                id="grade"
-                name="grade"
-                value={formData.grade}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md"
-              >
-                <option value="">학년 선택 (선택사항)</option>
-                {gradeOptions.filter(grade => grade).map(grade => (
-                  <option key={grade} value={grade}>{grade}</option>
-                ))}
-              </select>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* 입력 폼 */}
+        <div className="md:col-span-1">
+          <div className="lovable-card p-6">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>
+              시나리오 기본 정보
+            </h2>
             
-            <div>
-              <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
-                관련 교과
-              </label>
-              <select
-                id="subject"
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md"
-              >
-                <option value="">교과 선택 (선택사항)</option>
-                {subjectOptions.filter(subject => subject).map(subject => (
-                  <option key={subject} value={subject}>{subject}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <div className="mb-4">
-            <label htmlFor="totalDurationMinutes" className="block text-gray-700 font-medium mb-2">
-              총 토론 시간 (분)
-            </label>
-            <input
-              type="number"
-              id="totalDurationMinutes"
-              name="totalDurationMinutes"
-              value={formData.totalDurationMinutes || ''}
-              onChange={handleChange}
-              min="10"
-              max="300"
-              className={`w-full p-3 border rounded-md ${errors.totalDurationMinutes ? 'border-red-500' : 'border-gray-300'}`}
-            />
-            {errors.totalDurationMinutes && <p className="text-red-500 text-sm mt-1">{errors.totalDurationMinutes}</p>}
-          </div>
-          
-          <div className="mb-4">
-            <label htmlFor="groupCount" className="block text-gray-700 font-medium mb-2">
-              모둠 수 (선택사항)
-            </label>
-            <input
-              type="number"
-              id="groupCount"
-              name="groupCount"
-              value={formData.groupCount || ''}
-              onChange={handleChange}
-              min="2"
-              max="10"
-              placeholder="모둠 수를 입력하세요"
-              className="w-full p-3 border border-gray-300 rounded-md"
-            />
-          </div>
-          
-          {/* 키워드 표시 (AI 생성 후) */}
-          {formData.keywords && formData.keywords.length > 0 && (
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">
-                키워드
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {formData.keywords.map((keyword, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* 기대 학습 성과 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.expectedOutcomes && formData.scenarioDetails.expectedOutcomes.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-              <h3 className="text-lg font-medium text-yellow-800 mb-2">기대 학습 성과</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {formData.scenarioDetails.expectedOutcomes.map((outcome: string, index: number) => (
-                  <li key={index} className="text-gray-700">{outcome}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {/* 토론 배경 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.background && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <h3 className="text-lg font-medium text-blue-800 mb-2">토론 배경</h3>
-              <p className="text-gray-700 whitespace-pre-line">{formData.scenarioDetails.background}</p>
-            </div>
-          )}
-          
-          {/* 찬성/반대 입장 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.proArguments && formData.scenarioDetails?.conArguments && (
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                <h3 className="text-lg font-medium text-green-800 mb-2">찬성 입장</h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {formData.scenarioDetails.proArguments.map((arg: string, index: number) => (
-                    <li key={index} className="text-gray-700">{arg}</li>
-                  ))}
-                </ul>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  토론 주제 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="예: 초등학생의 SNS 사용은 제한해야 한다"
+                  style={{ borderColor: 'rgba(238, 92, 92, 0.3)', outline: 'none' }}
+                  required
+                />
+                {errors.title && (
+                  <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+                )}
               </div>
               
-              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                <h3 className="text-lg font-medium text-red-800 mb-2">반대 입장</h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {formData.scenarioDetails.conArguments.map((arg: string, index: number) => (
-                    <li key={index} className="text-gray-700">{arg}</li>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  학년
+                </label>
+                <select
+                  name="grade"
+                  value={formData.grade}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  style={{ borderColor: 'rgba(238, 92, 92, 0.3)', outline: 'none' }}
+                >
+                  {gradeOptions.map(grade => (
+                    <option key={grade} value={grade}>{grade || '학년 선택 (선택사항)'}</option>
                   ))}
-                </ul>
+                </select>
               </div>
-            </div>
-          )}
-          
-          {/* 교사 지도 노트 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.teacherTips && (
-            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-md">
-              <h3 className="text-lg font-medium text-purple-800 mb-2">교사 지도 노트</h3>
-              <p className="text-gray-700 whitespace-pre-line">{formData.scenarioDetails.teacherTips}</p>
-            </div>
-          )}
-          
-          {/* 핵심 질문 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.keyQuestions && formData.scenarioDetails.keyQuestions.length > 0 && (
-            <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-md">
-              <h3 className="text-lg font-medium text-indigo-800 mb-2">핵심 질문</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {formData.scenarioDetails.keyQuestions.map((question: string, index: number) => (
-                  <li key={index} className="text-gray-700">{question}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {/* 준비물 표시 (AI 생성 후) */}
-          {formData.scenarioDetails?.materials && formData.scenarioDetails.materials.length > 0 && (
-            <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
-              <h3 className="text-lg font-medium text-gray-800 mb-2">준비물</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {formData.scenarioDetails.materials.map((material: string, index: number) => (
-                  <li key={index} className="text-gray-700">{material}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          <div className="mb-6">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="saveToServer"
-                name="saveToServer"
-                checked={saveToServer}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label htmlFor="saveToServer" className="ml-2 text-gray-700">
-                서버에 저장 (MongoDB)
-              </label>
-            </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  교과
+                </label>
+                <select
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  style={{ borderColor: 'rgba(238, 92, 92, 0.3)', outline: 'none' }}
+                >
+                  {subjectOptions.map(subject => (
+                    <option key={subject} value={subject}>{subject || '교과 선택 (선택사항)'}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  토론 시간 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="totalDurationMinutes"
+                  value={formData.totalDurationMinutes}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="토론 총 시간(분)"
+                  min="10"
+                  style={{ borderColor: 'rgba(238, 92, 92, 0.3)', outline: 'none' }}
+                  required
+                />
+                {errors.totalDurationMinutes && (
+                  <p className="text-red-500 text-sm mt-1">{errors.totalDurationMinutes}</p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  모둠 수
+                </label>
+                <input
+                  type="number"
+                  name="groupCount"
+                  value={formData.groupCount || ''}
+                  onChange={handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="모둠 수 (선택사항)"
+                  min="2"
+                  style={{ borderColor: 'rgba(238, 92, 92, 0.3)', outline: 'none' }}
+                />
+              </div>
+              
+              <div className="flex items-center pt-3">
+                <input
+                  type="checkbox"
+                  id="saveToServer"
+                  name="saveToServer"
+                  checked={saveToServer}
+                  onChange={handleCheckboxChange}
+                  className="h-4 w-4"
+                  style={{ accentColor: 'var(--color-primary)' }}
+                />
+                <label htmlFor="saveToServer" className="ml-2 text-sm text-gray-700">
+                  서버에 시나리오 저장하기
+                </label>
+              </div>
+              
+              <div className="pt-3 flex space-x-2">
+                <button
+                  type="button"
+                  onClick={generateWithAI}
+                  disabled={isGenerating}
+                  className="lovable-btn-secondary px-4 py-2 flex-1"
+                >
+                  {isGenerating ? 'AI 생성 중...' : 'AI로 시나리오 생성하기'}
+                </button>
+                
+                <button
+                  type="submit"
+                  className="lovable-btn-primary px-4 py-2 flex-1"
+                >
+                  시나리오 만들기
+                </button>
+              </div>
+              
+              {aiGenerationStatus === 'success' && (
+                <div className="bg-green-50 text-green-700 p-3 rounded-md mt-4" style={{ borderLeft: '3px solid var(--color-primary)' }}>
+                  AI가 시나리오를 생성했습니다! '시나리오 만들기' 버튼을 클릭하여 진행하세요.
+                </div>
+              )}
+              
+              {aiGenerationStatus === 'error' && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md mt-4" style={{ borderLeft: '3px solid var(--color-primary)' }}>
+                  AI 생성 중 오류가 발생했습니다. 다시 시도해주세요.
+                </div>
+              )}
+            </form>
           </div>
           
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={() => router.push('/scenarios')}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
-            >
-              취소
-            </button>
+          <div className="lovable-card p-6 mt-6">
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-primary)' }}>사용 안내</h3>
+            <ul className="lovable-list space-y-2">
+              <li>토론 주제와 시간은 필수 입력 항목입니다.</li>
+              <li>AI 생성 기능을 사용하면 주제에 맞는 완성된 시나리오를 자동으로 만들어줍니다.</li>
+              <li>서버에 저장하면 다음에도 동일한 시나리오를 사용할 수 있습니다.</li>
+            </ul>
+          </div>
+        </div>
+        
+        {/* 예시 및 추천 주제 */}
+        <div className="md:col-span-2">
+          <div className="lovable-card p-6" style={{ backgroundColor: 'var(--color-accent)' }}>
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>
+              추천 토론 주제
+            </h2>
             
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              시나리오 생성
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sampleTopics.slice(0, 6).map((topic, index) => (
+                <div 
+                  key={index}
+                  className="bg-white p-3 rounded-md cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setFormData({ ...formData, title: topic })}
+                  style={{ borderLeft: '3px solid var(--color-primary)' }}
+                >
+                  <p>{topic}</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6">
+              <Link href="/topics/ai-topics" className="lovable-btn-primary py-2 px-4 inline-flex items-center">
+                AI로 새로운 토론 주제 찾기
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </Link>
+            </div>
           </div>
-        </form>
+          
+          <div className="lovable-card p-6 mt-6">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>
+              토론 시나리오란?
+            </h2>
+            
+            <p className="text-gray-700 mb-4">
+              토론 시나리오는 교사가 토론 수업을 체계적으로 진행할 수 있도록 돕는 안내서입니다. 
+              토론의 주제, 배경 지식, 진행 단계, 활동 내용 등을 포함하고 있습니다.
+            </p>
+            
+            <h3 className="text-lg font-semibold mt-4 mb-2" style={{ color: 'var(--color-primary)' }}>
+              시나리오 구성 요소
+            </h3>
+            
+            <ul className="lovable-list space-y-2">
+              <li><strong>토론 주제:</strong> 학생들이 찬반 의견을 나눌 수 있는 논제입니다.</li>
+              <li><strong>토론 단계:</strong> '다름과 마주하기', '다름을 이해하기', '다름과 공존하기' 3단계로 구성됩니다.</li>
+              <li><strong>활동 내용:</strong> 각 단계별 세부 활동과 교사 가이드를 제공합니다.</li>
+              <li><strong>시간 안내:</strong> 각 활동별 권장 소요 시간을 안내합니다.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

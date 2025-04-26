@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="500" height="300" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- 하트 모양 -->
+  <path d="M250,120 C250,120 220,90 180,90 C140,90 110,120 110,160 C110,200 150,240 250,280 C350,240 390,200 390,160 C390,120 360,90 320,90 C280,90 250,120 250,120 Z" fill="#ee5c5c" />
+  
+  <!-- 말풍선 모양 -->
+  <path d="M350,130 C380,130 400,150 400,180 C400,210 380,230 350,230 L330,230 L320,250 L310,230 L300,230 C270,230 250,210 250,180 C250,150 270,130 300,130 Z" fill="none" stroke="#ee5c5c" stroke-width="10" />
+  
+  <!-- 텍스트 -->
+  <text x="250" y="240" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#333333">LovableDebate</text>
+</svg> 
