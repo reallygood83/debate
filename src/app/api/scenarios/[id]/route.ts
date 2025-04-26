@@ -379,15 +379,13 @@ export async function DELETE(
       throw deleteError; // 다른 오류는 다시 던짐
     }
     
+    // 시나리오가 없어도 성공으로 처리 (멱등성 보장)
     if (!deletedScenario) {
-      console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);
-      return NextResponse.json(
-        { 
-          success: false,
-          error: '시나리오를 찾을 수 없습니다.' 
-        },
-        { status: 404 }
-      );
+      console.log(`ID: ${params.id}의 시나리오를 찾을 수 없지만, 삭제 요청은 성공으로 처리`);
+      return NextResponse.json({
+        success: true,
+        message: '시나리오가 이미 존재하지 않거나 성공적으로 삭제되었습니다.'
+      });
     }
     
     console.log(`ID: ${params.id}의 시나리오 삭제 성공`);

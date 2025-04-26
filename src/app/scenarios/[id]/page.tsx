@@ -291,24 +291,42 @@ export default function ScenarioDetailPage() {
     }
     
     try {
+      setDeletingScenario(true);
+      
       if (id.startsWith('local_') || exampleScenarios.some(s => s.id === id)) {
         // 로컬 시나리오 삭제
         deleteScenario(id);
-      } else {
-        // 서버 시나리오 삭제
+        router.push('/scenarios');
+        return;
+      }
+      
+      // 서버 시나리오 삭제
+      try {
         const response = await fetch(`/api/scenarios/${id}`, {
           method: 'DELETE',
         });
         
-        if (!response.ok) {
-          throw new Error('시나리오 삭제 중 오류가 발생했습니다.');
+        const data = await response.json();
+        
+        // 성공 응답이 아니더라도 로컬에서는 삭제 처리
+        if (!response.ok && !data.success) {
+          console.error('Failed to delete server scenario:', new Error(data.error || '시나리오 삭제 중 오류가 발생했습니다.'));
+          // 서버 삭제 실패 시 로컬에서라도 삭제
+          deleteScenario(id);
         }
+        
+        router.push('/scenarios');
+      } catch (serverError) {
+        console.error('Server delete failed, falling back to local delete:', serverError);
+        // 서버 요청 자체가 실패한 경우에도 로컬에서는 삭제 처리
+        deleteScenario(id);
+        router.push('/scenarios');
       }
-      
-      router.push('/scenarios');
     } catch (err: any) {
       console.error('시나리오 삭제 오류:', err);
       alert(err.message || '시나리오 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingScenario(false);
     }
   };
 
