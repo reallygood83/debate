@@ -98,18 +98,83 @@ export async function getScenarioById(id: string) {
   }
   
   try {
-    const response = await fetchWithRetry(`/api/scenarios/${id}`);
+    // 템플릿 생성 요청 플래그 추가
+    const url = `/api/scenarios/${id}?createTemplate=true`;
+    
+    const response = await fetchWithRetry(url);
     const result = await response.json();
     
     if (!result.success) {
+      // 서버가 템플릿을 반환했는지 확인
+      if (result.suggestLocalSync) {
+        // 로컬 스토리지에 시나리오가 있는지 다시 확인
+        const savedScenario = getLocalScenarioById(id);
+        if (savedScenario) {
+          return { success: true, data: savedScenario, isLocalOnly: true };
+        }
+      }
       throw new Error(result.error || '시나리오를 찾을 수 없습니다.');
+    }
+    
+    // 템플릿 시나리오인 경우에도 성공으로 처리
+    if (result.isTemplate) {
+      console.log('서버에서 템플릿 시나리오를 받았습니다:', result.data);
+      
+      // 템플릿을 로컬에 저장
+      const templateScenario = parseScenario(result.data);
+      saveScenarioLocally(templateScenario);
+      
+      return { 
+        success: true, 
+        data: templateScenario,
+        isTemplate: true
+      };
     }
     
     return result;
   } catch (error) {
     console.error(`Failed to load scenario with ID ${id}:`, error);
-    throw new Error('시나리오를 불러오는 중 오류가 발생했습니다.');
+    
+    // 다른 모든 방법이 실패한 경우 빈 시나리오 템플릿 생성
+    const fallbackTemplate = createEmptyTemplateScenario(id);
+    console.log('서버 로드 실패, 빈 템플릿 생성:', fallbackTemplate);
+    
+    // 로컬에 저장
+    saveScenarioLocally(fallbackTemplate);
+    
+    return { 
+      success: true, 
+      data: fallbackTemplate,
+      isTemplate: true,
+      note: '서버 로드 실패로 로컬 템플릿 생성'
+    };
   }
+}
+
+// 실패 시 사용할 빈 템플릿 시나리오 생성 함수
+function createEmptyTemplateScenario(id: string): Scenario {
+  const now = new Date();
+  return {
+    id: id,
+    title: '새 토론 시나리오',
+    totalDurationMinutes: 45,
+    groupCount: 4,
+    createdAt: now,
+    updatedAt: now,
+    stages: {
+      stage1: { id: 'stage1', title: '준비 단계', activities: [] },
+      stage2: { id: 'stage2', title: '토론 단계', activities: [] },
+      stage3: { id: 'stage3', title: '정리 단계', activities: [] }
+    },
+    aiGenerated: false,
+    scenarioDetails: {
+      background: '',
+      proArguments: [],
+      conArguments: [],
+      teacherTips: '',
+      keyQuestions: []
+    }
+  };
 }
 
 // 시나리오 저장하기 (서버)

@@ -224,6 +224,14 @@ export default function ScenarioDetailPage() {
           const result = await getScenarioById(id);
           if (result.success && result.data) {
             console.log("서버에서 시나리오 찾음:", result.data);
+            
+            // 빈 템플릿인 경우 알림
+            if (result.isTemplate) {
+              console.log("템플릿 시나리오가 생성되었습니다");
+              // 로컬에 자동 저장
+              saveScenarioLocally(result.data);
+            }
+            
             setScenario(result.data);
             // AI 생성 콘텐츠 숨김 상태 유지
             setShowAIContent(false);
@@ -232,7 +240,38 @@ export default function ScenarioDetailPage() {
           }
         } catch (serverError) {
           console.error('서버에서 시나리오 로드 실패:', serverError);
-          throw new Error('서버에서 시나리오를 불러오는 중 오류가 발생했습니다.');
+          
+          // 이 시점에서도 실패하면 빈 템플릿을 제공
+          console.log("모든 로드 시도 실패, 새 템플릿 생성");
+          const newTemplate = {
+            id: id,
+            title: '새 토론 시나리오',
+            totalDurationMinutes: 45,
+            groupCount: 4,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            stages: {
+              stage1: { id: 'stage1', title: '준비 단계', activities: [] },
+              stage2: { id: 'stage2', title: '토론 단계', activities: [] },
+              stage3: { id: 'stage3', title: '정리 단계', activities: [] }
+            },
+            aiGenerated: false,
+            scenarioDetails: {
+              background: '',
+              proArguments: [],
+              conArguments: [],
+              teacherTips: '',
+              keyQuestions: []
+            }
+          };
+          
+          // 로컬에 저장하고 표시
+          saveScenarioLocally(newTemplate);
+          setScenario(newTemplate);
+          
+          // 가벼운 오류 메시지 (페이지는 계속 표시)
+          setError('서버에서 시나리오를 불러올 수 없어 새 템플릿을 생성했습니다. 수정 후 저장하세요.');
+          return;
         }
       } catch (err: any) {
         console.error('시나리오 로드 오류:', err);

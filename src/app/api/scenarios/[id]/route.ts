@@ -68,10 +68,60 @@ export async function GET(
     
     if (!scenario) {
       console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);
+      
+      // 요청 헤더에서 클라이언트가 로컬 데이터 동기화를 원하는지 확인
+      const allowLocalSync = request.headers.get('X-Allow-Local-Sync') === 'true';
+      
+      if (allowLocalSync) {
+        // 클라이언트가 로컬 데이터 동기화를 원하면 특수 응답 반환
+        return NextResponse.json({
+          success: false,
+          error: '시나리오를 찾을 수 없습니다.',
+          localSync: true  // 클라이언트에게 로컬 데이터를 사용하라고 알림
+        }, { status: 404 });
+      }
+      
+      // 클라이언트가 빈 시나리오 템플릿을 요청할 수 있는 플래그
+      const createTemplate = request.nextUrl.searchParams.get('createTemplate') === 'true';
+      
+      if (createTemplate) {
+        // 빈 시나리오 템플릿 생성
+        const templateScenario = {
+          _id: params.id,
+          title: '새 토론 시나리오',
+          totalDurationMinutes: 45,
+          groupCount: 4,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          stages: {
+            stage1: { id: 'stage1', title: '준비 단계', activities: [] },
+            stage2: { id: 'stage2', title: '토론 단계', activities: [] },
+            stage3: { id: 'stage3', title: '정리 단계', activities: [] }
+          },
+          aiGenerated: false,
+          scenarioDetails: {
+            background: '',
+            proArguments: [],
+            conArguments: [],
+            teacherTips: '',
+            keyQuestions: []
+          }
+        };
+        
+        console.log(`ID: ${params.id}의 템플릿 시나리오 생성`);
+        return NextResponse.json({
+          success: true,
+          data: templateScenario,
+          isTemplate: true
+        });
+      }
+      
+      // 기본적으로는 404 반환
       return NextResponse.json(
         { 
           success: false,
-          error: '시나리오를 찾을 수 없습니다.' 
+          error: '시나리오를 찾을 수 없습니다.',
+          suggestLocalSync: true  // 클라이언트에게 로컬 동기화 옵션이 있음을 알림
         },
         { status: 404 }
       );
