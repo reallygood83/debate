@@ -337,6 +337,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   console.log(`====== DELETE /api/scenarios/${params.id} 실행 시작 ======`);
+  console.log(`요청 URL: ${request.url}`);
+  console.log(`요청 헤더:`, Object.fromEntries([...request.headers.entries()]));
+  
   try {
     console.log("MongoDB 연결 시도 중...");
     const conn = await dbConnect();
@@ -355,18 +358,65 @@ export async function DELETE(
     
     console.log("MongoDB 연결 성공!");
     
+    // 삭제 전에 시나리오가 실제로 존재하는지 먼저 확인
+    console.log(`ID: ${params.id}의 시나리오 존재 여부 확인 중...`);
+    
+    let existingScenario;
+    try {
+      existingScenario = await Scenario.findOne({ _id: params.id }).lean().exec();
+    } catch (findError) {
+      console.error(`시나리오 조회 중 오류:`, findError);
+      // 오류가 발생해도 계속 진행
+    }
+    
+    if (!existingScenario) {
+      console.log(`ID: ${params.id}의 시나리오가 이미 존재하지 않습니다.`);
+      return NextResponse.json({
+        success: true,
+        message: '시나리오가 이미 존재하지 않습니다.'
+      });
+    }
+    
+    console.log(`ID: ${params.id}의 시나리오가 존재함을 확인. 삭제 시도...`);
+    console.log('시나리오 정보:', JSON.stringify(existingScenario));
+    
+    // 강제 삭제 모드 체크
+    const forceDelete = request.nextUrl.searchParams.get('force') === 'true' || 
+                        request.headers.get('X-Force-Delete') === 'true';
+    
+    console.log(`강제 삭제 모드: ${forceDelete ? '활성화' : '비활성화'}`);
+    
     console.log(`ID: ${params.id}의 시나리오 삭제 중...`);
     // UUID 형식의 ID를 처리하기 위해 findOneAndDelete 사용
     let deletedScenario;
     try {
-      deletedScenario = await withTimeout(
-        Scenario.findOneAndDelete({ _id: params.id }).lean().exec(),
-        RESPONSE_TIMEOUT
-      );
+      if (forceDelete) {
+        // 강제 삭제 모드: deleteOne 사용
+        console.log(`강제 삭제 모드로 deleteOne 사용...`);
+        const deleteResult = await withTimeout(
+          Scenario.deleteOne({ _id: params.id }).exec(),
+          RESPONSE_TIMEOUT
+        );
+        
+        console.log(`deleteOne 결과:`, deleteResult);
+        
+        if (deleteResult.deletedCount === 0) {
+          console.warn(`deleteOne 결과: 삭제된 문서 없음`);
+        } else {
+          console.log(`deleteOne 결과: ${deleteResult.deletedCount}개 문서 삭제됨`);
+          deletedScenario = existingScenario; // 이미 조회했던 문서 사용
+        }
+      } else {
+        // 기본 모드: findOneAndDelete 사용
+        deletedScenario = await withTimeout(
+          Scenario.findOneAndDelete({ _id: params.id }).lean().exec(),
+          RESPONSE_TIMEOUT
+        );
+      }
     } catch (deleteError) {
       // CastError가 발생한 경우 (ID 형식 불일치)
       if (deleteError instanceof Error && deleteError.name === 'CastError') {
-        console.error(`ID 형식 오류: ${params.id}는 유효한 ID 형식이 아닙니다`);
+        console.error(`ID 형식 오류: ${params.id}는 유효한 MongoDB ID 형식이 아닙니다`);
         return NextResponse.json(
           { 
             success: false,
@@ -376,11 +426,48 @@ export async function DELETE(
           { status: 400 }
         );
       }
+      console.error(`삭제 작업 중 오류 발생:`, deleteError);
       throw deleteError; // 다른 오류는 다시 던짐
     }
     
+    // 실제로 삭제되었는지 확인
+    console.log(`삭제 작업 후 ID: ${params.id}의 시나리오 존재 여부 다시 확인 중...`);
+    const checkAfterDelete = await Scenario.findOne({ _id: params.id }).lean().exec();
+    
+    if (checkAfterDelete) {
+      console.error(`경고: 삭제 작업 후에도 ID: ${params.id}의 시나리오가 여전히 존재합니다!`);
+      console.log(`삭제 실패한 시나리오 데이터:`, JSON.stringify(checkAfterDelete));
+      
+      if (forceDelete) {
+        // 강제 삭제가 실패한 경우, 더 강력한 방법 시도
+        console.log(`마지막 시도: deleteMany 사용...`);
+        try {
+          const finalDeleteResult = await Scenario.deleteMany({ _id: params.id }).exec();
+          console.log(`deleteMany 결과:`, finalDeleteResult);
+          
+          if (finalDeleteResult.deletedCount === 0) {
+            console.error(`deleteMany 실패: 삭제된 문서 없음`);
+            return NextResponse.json(
+              { 
+                success: false,
+                error: '시나리오 삭제에 실패했습니다. 데이터베이스 오류가 발생했습니다.',
+                details: '여러 번의 삭제 시도가 모두 실패했습니다.'
+              },
+              { status: 500 }
+            );
+          }
+          
+          console.log(`deleteMany 성공: ${finalDeleteResult.deletedCount}개 문서 삭제됨`);
+        } catch (finalError) {
+          console.error(`deleteMany 오류:`, finalError);
+        }
+      }
+    } else {
+      console.log(`확인 완료: ID: ${params.id}의 시나리오가 성공적으로 삭제되었습니다.`);
+    }
+    
     // 시나리오가 없어도 성공으로 처리 (멱등성 보장)
-    if (!deletedScenario) {
+    if (!deletedScenario && !forceDelete) {
       console.log(`ID: ${params.id}의 시나리오를 찾을 수 없지만, 삭제 요청은 성공으로 처리`);
       return NextResponse.json({
         success: true,
@@ -390,10 +477,20 @@ export async function DELETE(
     
     console.log(`ID: ${params.id}의 시나리오 삭제 성공`);
     console.log(`====== DELETE /api/scenarios/${params.id} 성공적으로 완료 ======`);
+    
+    // 캐시 방지 헤더 추가
+    const headers = new Headers();
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    headers.set('Surrogate-Control', 'no-store');
+    
     return NextResponse.json({
       success: true,
-      message: '시나리오가 성공적으로 삭제되었습니다.'
-    });
+      message: '시나리오가 성공적으로 삭제되었습니다.',
+      id: params.id,
+      timestamp: Date.now()
+    }, { headers });
   } catch (error: unknown) {
     console.error(`====== DELETE /api/scenarios/${params.id} 오류 발생 ======`);
     console.error('시나리오 삭제 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
