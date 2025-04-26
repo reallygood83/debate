@@ -166,12 +166,14 @@ export async function PUT(
     // 업데이트 시간 추가
     const updateData = {
       ...body,
+      _id: params.id, // 명시적으로 ID 설정
       updatedAt: new Date()
     };
     
-    console.log(`ID: ${params.id}의 시나리오 업데이트 중...`);
+    console.log(`ID: ${params.id}의 시나리오 업데이트 또는 생성 중...`);
     
     // UUID 형식의 ID를 처리하기 위해 findOneAndUpdate 사용
+    // upsert:true 옵션으로 문서가 없으면 새로 생성
     let updatedScenario;
     try {
       updatedScenario = await withTimeout(
@@ -181,7 +183,8 @@ export async function PUT(
           { 
             new: true, 
             runValidators: true,
-            lean: true 
+            lean: true,
+            upsert: true // 문서가 없으면 새로 생성
           }
         ).exec(),
         RESPONSE_TIMEOUT
@@ -203,22 +206,25 @@ export async function PUT(
     }
     
     if (!updatedScenario) {
-      console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);
+      console.log(`ID: ${params.id}의 시나리오 생성 또는 업데이트 실패`);
       return NextResponse.json(
         { 
           success: false,
-          error: '시나리오를 찾을 수 없습니다.' 
+          error: '시나리오를 생성 또는 업데이트하지 못했습니다.' 
         },
-        { status: 404 }
+        { status: 500 }
       );
     }
     
-    console.log(`ID: ${params.id}의 시나리오 업데이트 성공`);
+    const isNewlyCreated = !body._id;
+    console.log(`ID: ${params.id}의 시나리오 ${isNewlyCreated ? '생성' : '업데이트'} 성공`);
     console.log(`====== PUT /api/scenarios/${params.id} 성공적으로 완료 ======`);
+    
     return NextResponse.json({
       success: true,
-      data: updatedScenario
-    });
+      data: updatedScenario,
+      isNewlyCreated
+    }, { status: isNewlyCreated ? 201 : 200 });
   } catch (error: unknown) {
     console.error(`====== PUT /api/scenarios/${params.id} 오류 발생 ======`);
     console.error('시나리오 수정 오류 세부 정보:', error instanceof Error ? error.stack : String(error));
