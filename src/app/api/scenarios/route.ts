@@ -186,22 +186,67 @@ export async function POST(request: NextRequest) {
     
     // 시나리오 생성
     console.log("새 시나리오 생성 중...");
-    const scenario = new Scenario({
+    
+    // 클라이언트에서 ID가 제공된 경우 사용하고, 그렇지 않으면 자동 생성
+    const scenarioData = {
       ...body,
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    };
+    
+    // ID가 UUID 형식인지 확인
+    if (body._id && typeof body._id === 'string' && 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body._id)) {
+      console.log(`클라이언트에서 제공한 UUID 사용: ${body._id}`);
+      scenarioData._id = body._id;
+    } else {
+      // ID가 제공되지 않거나 유효하지 않은 경우 모델에서 자동 생성 (UUID)
+      console.log("UUID 자동 생성");
+    }
+    
+    const scenario = new Scenario(scenarioData);
     
     // 타임아웃 적용하여 저장
     console.log("시나리오 데이터베이스 저장 중...");
-    const savedScenario = await withTimeout(scenario.save(), RESPONSE_TIMEOUT) as any;
-    console.log(`시나리오 저장 성공: ID=${savedScenario._id}`);
-    
-    console.log("====== POST /api/scenarios 성공적으로 완료 ======");
-    return NextResponse.json({
-      success: true,
-      data: savedScenario
-    }, { status: 201 });
+    try {
+      const savedScenario = await withTimeout(scenario.save(), RESPONSE_TIMEOUT) as any;
+      console.log(`시나리오 저장 성공: ID=${savedScenario._id}`);
+      
+      console.log("====== POST /api/scenarios 성공적으로 완료 ======");
+      return NextResponse.json({
+        success: true,
+        data: savedScenario
+      }, { status: 201 });
+    } catch (saveError) {
+      // 중복 ID 오류 처리
+      if (saveError instanceof Error && saveError.name === 'MongoServerError' && 
+          (saveError as any).code === 11000) {
+        console.error("중복 ID 오류:", saveError);
+        return NextResponse.json(
+          {
+            success: false,
+            error: '해당 ID를 가진 시나리오가 이미 존재합니다.',
+            details: saveError.message
+          },
+          { status: 409 }
+        );
+      }
+      
+      // 유효성 검사 오류 처리
+      if (saveError instanceof Error && saveError.name === 'ValidationError') {
+        console.error("유효성 검사 오류:", saveError);
+        return NextResponse.json(
+          {
+            success: false,
+            error: '시나리오 데이터가 유효하지 않습니다.',
+            details: saveError.message
+          },
+          { status: 400 }
+        );
+      }
+      
+      throw saveError; // 다른 오류는 다시 던짐
+    }
   } catch (error: unknown) {
     console.error("====== POST /api/scenarios 오류 발생 ======");
     console.error('시나리오 저장 오류 세부 정보:', error instanceof Error ? error.stack : String(error));

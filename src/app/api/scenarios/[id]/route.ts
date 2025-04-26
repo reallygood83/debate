@@ -43,11 +43,28 @@ export async function GET(
     
     console.log(`ID: ${params.id}로 시나리오 조회 중...`);
     // 타임아웃 적용하여 단일 문서 조회
-    // findById 대신 find를 사용하여 lean() 최적화 활용
-    const scenario = await withTimeout(
-      Scenario.findById(params.id).lean().exec(),
-      RESPONSE_TIMEOUT
-    );
+    let scenario;
+    try {
+      // findById 대신 find를 사용하여 String ID 처리
+      scenario = await withTimeout(
+        Scenario.findOne({ _id: params.id }).lean().exec(),
+        RESPONSE_TIMEOUT
+      );
+    } catch (findError) {
+      // CastError가 발생한 경우 (ID 형식 불일치)
+      if (findError instanceof Error && findError.name === 'CastError') {
+        console.error(`ID 형식 오류: ${params.id}는 유효한 MongoDB ID 형식이 아닙니다`);
+        return NextResponse.json(
+          { 
+            success: false,
+            error: '유효하지 않은 시나리오 ID 형식입니다.',
+            details: `ID "${params.id}"는 유효한 ID 형식이 아닙니다.`
+          },
+          { status: 400 }
+        );
+      }
+      throw findError; // 다른 오류는 다시 던짐
+    }
     
     if (!scenario) {
       console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);
@@ -153,21 +170,37 @@ export async function PUT(
     };
     
     console.log(`ID: ${params.id}의 시나리오 업데이트 중...`);
-    // 타임아웃 적용하여 문서 업데이트
-    // 유효성 검사 실행하고 새 문서 반환
-    const updatedScenario = await withTimeout(
-      Scenario.findByIdAndUpdate(
-        params.id,
-        updateData,
-        { 
-          new: true, 
-          runValidators: true,
-          // 전체 문서를 반환하기보다 간소화된 객체 반환
-          lean: true 
-        }
-      ).exec(),
-      RESPONSE_TIMEOUT
-    );
+    
+    // UUID 형식의 ID를 처리하기 위해 findOneAndUpdate 사용
+    let updatedScenario;
+    try {
+      updatedScenario = await withTimeout(
+        Scenario.findOneAndUpdate(
+          { _id: params.id },
+          updateData,
+          { 
+            new: true, 
+            runValidators: true,
+            lean: true 
+          }
+        ).exec(),
+        RESPONSE_TIMEOUT
+      );
+    } catch (updateError) {
+      // CastError가 발생한 경우 (ID 형식 불일치)
+      if (updateError instanceof Error && updateError.name === 'CastError') {
+        console.error(`ID 형식 오류: ${params.id}는 유효한 ID 형식이 아닙니다`);
+        return NextResponse.json(
+          { 
+            success: false,
+            error: '유효하지 않은 시나리오 ID 형식입니다.',
+            details: `ID "${params.id}"는 유효한 ID 형식이 아닙니다. 시나리오 스키마가 UUID를 지원하도록 수정해야 합니다.`
+          },
+          { status: 400 }
+        );
+      }
+      throw updateError; // 다른 오류는 다시 던짐
+    }
     
     if (!updatedScenario) {
       console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);
@@ -267,11 +300,28 @@ export async function DELETE(
     console.log("MongoDB 연결 성공!");
     
     console.log(`ID: ${params.id}의 시나리오 삭제 중...`);
-    // 타임아웃 적용하여 문서 삭제
-    const deletedScenario = await withTimeout(
-      Scenario.findByIdAndDelete(params.id).lean().exec(),
-      RESPONSE_TIMEOUT
-    );
+    // UUID 형식의 ID를 처리하기 위해 findOneAndDelete 사용
+    let deletedScenario;
+    try {
+      deletedScenario = await withTimeout(
+        Scenario.findOneAndDelete({ _id: params.id }).lean().exec(),
+        RESPONSE_TIMEOUT
+      );
+    } catch (deleteError) {
+      // CastError가 발생한 경우 (ID 형식 불일치)
+      if (deleteError instanceof Error && deleteError.name === 'CastError') {
+        console.error(`ID 형식 오류: ${params.id}는 유효한 ID 형식이 아닙니다`);
+        return NextResponse.json(
+          { 
+            success: false,
+            error: '유효하지 않은 시나리오 ID 형식입니다.',
+            details: `ID "${params.id}"는 유효한 ID 형식이 아닙니다.`
+          },
+          { status: 400 }
+        );
+      }
+      throw deleteError; // 다른 오류는 다시 던짐
+    }
     
     if (!deletedScenario) {
       console.log(`ID: ${params.id}의 시나리오를 찾을 수 없음`);

@@ -1,4 +1,5 @@
 import { Schema, models, model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 // 활동 스키마
 const ActivitySchema = new Schema({
@@ -18,6 +19,13 @@ const StageSectionSchema = new Schema({
 
 // 시나리오 스키마
 const ScenarioSchema = new Schema({
+  // UUID를 _id로 사용할 수 있도록 설정
+  _id: {
+    type: String,
+    default: function() {
+      return uuidv4();
+    }
+  },
   title: {
     type: String,
     required: [true, '토론 주제를 입력해주세요.'],
@@ -61,7 +69,9 @@ const ScenarioSchema = new Schema({
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
   // 버전키 비활성화 (서버리스 환경에서 성능 향상)
-  versionKey: false
+  versionKey: false,
+  // _id 타입이 String이므로 이를 명시적으로 설정
+  _id: true
 });
 
 // 자주 조회되는 필드에 인덱스 추가
