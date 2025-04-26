@@ -284,6 +284,34 @@ export default function ScenariosPage() {
       const prevServerScenarios = [...serverScenarios];
       console.log(`삭제 전 서버 시나리오 수: ${prevServerScenarios.length}`);
       
+      // 먼저 서버에서 시나리오가 실제로 존재하는지 확인
+      try {
+        const checkResponse = await fetch(`/api/scenarios/${id}?t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (checkResponse.status === 404) {
+          console.log(`시나리오 ID ${id}가 서버에 이미 존재하지 않습니다. 로컬 상태만 업데이트합니다.`);
+          // 이미 없는 경우 로컬 상태만 업데이트
+          setServerScenarios(prev => {
+            const filtered = prev.filter(scenario => scenario.id !== id);
+            console.log(`로컬 상태 업데이트: ${filtered.length}개 시나리오 남음`);
+            return filtered;
+          });
+          showToast('시나리오가 목록에서 제거되었습니다.', 'success');
+          return;
+        }
+        
+        console.log(`시나리오 ID ${id}가 서버에 존재함을 확인. 삭제를 진행합니다.`);
+      } catch (checkError) {
+        console.error(`시나리오 확인 중 오류:`, checkError);
+        // 오류가 발생했지만 계속 진행
+      }
+      
+      // 삭제 요청
       const result = await deleteScenario(id);
       console.log(`시나리오 삭제 결과:`, result);
       
@@ -302,9 +330,9 @@ export default function ScenariosPage() {
           console.log(`삭제 성공 메시지: ${result.message}`);
         }
         
-        // 선택적으로 서버에서 목록 다시 로드
+        // 반드시 서버에서 목록 다시 로드
+        console.log('서버 데이터 다시 로드 시도...');
         setTimeout(() => {
-          console.log('서버 데이터 다시 로드 시도...');
           loadServerScenarios();
         }, 1500);
       } else {

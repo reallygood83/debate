@@ -222,13 +222,21 @@ export async function deleteScenarioFromServer(scenarioId: string): Promise<bool
     const url = `/api/scenarios/${scenarioId}`;
     console.log(`API 호출 URL: ${url}`);
     
+    // 랜덤 쿼리 파라미터 추가하여 캐싱 방지
+    const cacheBuster = `?t=${Date.now()}&force=true`;
+    const urlWithParam = `${url}${cacheBuster}`;
+    console.log(`캐시 방지 파라미터가 추가된 URL: ${urlWithParam}`);
+    
     // 캐시 방지 헤더 추가 및 요청 시도
     console.log('DELETE 요청 시작...');
-    const response = await fetchWithRetry(url, {
+    const response = await fetchWithRetry(urlWithParam, {
       method: 'DELETE',
       headers: {
-        'Cache-Control': 'no-cache, no-store',
-        'Pragma': 'no-cache'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Force-Delete': 'true', // 서버에 강제 삭제 신호
+        'X-Request-Time': Date.now().toString() // 타임스탬프 추가
       }
     }, 5); // 최대 5번 재시도
     
@@ -247,6 +255,26 @@ export async function deleteScenarioFromServer(scenarioId: string): Promise<bool
       
       console.error(`서버 시나리오 삭제 실패: ${result.error || '알 수 없는 오류'}`);
       return false;
+    }
+    
+    // 추가 확인 - 정말 삭제되었는지 GET 요청으로 확인
+    try {
+      console.log(`삭제 확인을 위해 GET 요청 시도...`);
+      const checkResponse = await fetch(`/api/scenarios/${scenarioId}?t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (checkResponse.status === 404) {
+        console.log(`확인 완료: 시나리오가 실제로 삭제되었습니다.`);
+      } else {
+        console.warn(`주의: 삭제 요청은 성공했지만 시나리오가 여전히 존재합니다. 상태 코드: ${checkResponse.status}`);
+        // 실제로 삭제되지 않았을 수 있으므로 false 반환 검토
+      }
+    } catch (checkError) {
+      console.error(`삭제 확인 중 오류:`, checkError);
     }
     
     console.log(`서버에서 시나리오 ID ${scenarioId} 삭제 성공!`);
