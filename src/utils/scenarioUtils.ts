@@ -214,29 +214,40 @@ export async function saveScenarioToServer(scenario: Scenario): Promise<Scenario
 }
 
 // 서버에서 시나리오 삭제하기
-export async function deleteScenarioFromServer(scenarioId: string): Promise<void> {
+export async function deleteScenarioFromServer(scenarioId: string): Promise<boolean> {
   try {
+    console.log(`서버에서 시나리오 ID ${scenarioId} 삭제 시도...`);
+    
+    // 재시도 횟수 증가, 특히 삭제 작업은 중요하므로
     const response = await fetchWithRetry(`/api/scenarios/${scenarioId}`, {
       method: 'DELETE',
-    });
+      headers: {
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache'
+      }
+    }, 5); // 최대 5번 재시도
     
     const result = await response.json();
     
     if (!result.success) {
-      // 404 오류는 무시 (시나리오가 이미 없는 경우)
+      // 404 오류는 이미 없는 것이므로 성공으로 처리
       if (response.status === 404) {
         console.log(`시나리오 ID ${scenarioId}가 서버에 존재하지 않아 삭제할 필요 없음`);
-        return;
+        return true;
       }
-      throw new Error(result.error || '서버에서 시나리오를 삭제하는 중 오류가 발생했습니다.');
+      
+      console.error(`서버 시나리오 삭제 실패: ${result.error || '알 수 없는 오류'}`);
+      return false;
     }
+    
+    console.log(`서버에서 시나리오 ID ${scenarioId} 삭제 성공!`);
+    return true;
   } catch (error) {
     // 서버 오류 발생 시 로컬에서만 삭제되었음을 로그로 남김
-    console.error(`Failed to delete scenario with ID ${scenarioId} from server:`, error);
+    console.error(`서버에서 시나리오 ID ${scenarioId} 삭제 실패:`, error);
     console.warn(`시나리오 ID ${scenarioId}가 로컬에서만 삭제되었습니다.`);
     
-    // 오류를 다시 던져서 호출자가 처리할 수 있게 함
-    throw new Error('서버에서 시나리오를 삭제하는 중 오류가 발생했습니다.');
+    return false;
   }
 }
 
@@ -343,16 +354,48 @@ export async function saveScenario(scenario: Scenario): Promise<{ localSuccess: 
   return { localSuccess, serverSuccess };
 }
 
-export function deleteScenario(scenarioId: string): void {
-  // 로컬 스토리지에서 삭제
-  deleteScenarioLocally(scenarioId);
-  
-  // 서버에서 삭제 시도 (실패해도 로컬에서는 삭제됨)
-  if (typeof window !== 'undefined') {
-    deleteScenarioFromServer(scenarioId).catch(error => {
-      console.error('Failed to delete scenario from server:', error);
-      console.log('시나리오가 로컬에서는 삭제되었지만 서버에서는 삭제되지 않았을 수 있습니다.');
-      // 오류를 무시하고 로컬 삭제는 유지
-    });
+export async function deleteScenario(scenarioId: string): Promise<{ success: boolean, message?: string }> {
+  try {
+    // 로컬에서 시나리오가 있는지 확인
+    const localScenario = getLocalScenarioById(scenarioId);
+    
+    // 서버 삭제 시도 (서버에도 존재할 가능성이 있는 경우)
+    if (typeof window !== 'undefined' && !scenarioId.startsWith('local_')) {
+      console.log(`서버 및 로컬에서 시나리오 ID ${scenarioId} 삭제 시도...`);
+      
+      try {
+        const serverDeleteSuccess = await deleteScenarioFromServer(scenarioId);
+        
+        if (!serverDeleteSuccess) {
+          console.warn(`서버 삭제 실패, 로컬 삭제만 진행합니다: ${scenarioId}`);
+        }
+        
+        // 서버 삭제 성공 여부와 관계없이 로컬에서 삭제 (동기화 우선)
+        deleteScenarioLocally(scenarioId);
+        return { 
+          success: true, 
+          message: serverDeleteSuccess 
+            ? '시나리오가 서버와 로컬에서 삭제되었습니다.' 
+            : '시나리오가 로컬에서만 삭제되었습니다. 서버에서는 삭제에 실패했습니다.'
+        };
+      } catch (error) {
+        console.error("시나리오 삭제 중 예상치 못한 오류:", error);
+        
+        // 서버 삭제 실패해도 로컬은 삭제
+        deleteScenarioLocally(scenarioId);
+        return { 
+          success: true, 
+          message: '서버 오류로 인해 시나리오가 로컬에서만 삭제되었습니다.' 
+        };
+      }
+    } else {
+      // 로컬 전용 시나리오는 로컬에서만 삭제
+      console.log(`로컬 전용 시나리오 삭제: ${scenarioId}`);
+      deleteScenarioLocally(scenarioId);
+      return { success: true, message: '로컬 시나리오가 삭제되었습니다.' };
+    }
+  } catch (error) {
+    console.error("시나리오 삭제 중 오류:", error);
+    return { success: false, message: '시나리오 삭제 중 오류가 발생했습니다.' };
   }
 } 

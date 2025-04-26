@@ -193,6 +193,31 @@ export default function ScenarioDetailPage() {
   const [deletingScenario, setDeletingScenario] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showAIContent, setShowAIContent] = useState(false);
+  
+  // 토스트 메시지 상태 추가
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+  
+  // 토스트 메시지 표시 함수
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({
+      show: true,
+      message,
+      type
+    });
+    
+    // 3초 후 토스트 메시지 자동 숨김
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
 
   useEffect(() => {
     async function loadScenario() {
@@ -286,46 +311,35 @@ export default function ScenarioDetailPage() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!window.confirm('정말 이 시나리오를 삭제하시겠습니까?')) {
+    if (!id) {
+      console.error('시나리오 ID가 없습니다.');
+      return;
+    }
+    
+    if (!confirm('이 시나리오를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       return;
     }
     
     try {
       setDeletingScenario(true);
       
-      if (id.startsWith('local_') || exampleScenarios.some(s => s.id === id)) {
-        // 로컬 시나리오 삭제
-        deleteScenario(id);
-        router.push('/scenarios');
-        return;
-      }
+      const result = await deleteScenario(id);
       
-      // 서버 시나리오 삭제
-      try {
-        const response = await fetch(`/api/scenarios/${id}`, {
-          method: 'DELETE',
-        });
+      if (result.success) {
+        // 성공 메시지 표시
+        showToast('시나리오가 성공적으로 삭제되었습니다.', 'success');
         
-        const data = await response.json();
-        
-        // 성공 응답이 아니더라도 로컬에서는 삭제 처리
-        if (!response.ok && !data.success) {
-          console.error('Failed to delete server scenario:', new Error(data.error || '시나리오 삭제 중 오류가 발생했습니다.'));
-          // 서버 삭제 실패 시 로컬에서라도 삭제
-          deleteScenario(id);
-        }
-        
-        router.push('/scenarios');
-      } catch (serverError) {
-        console.error('Server delete failed, falling back to local delete:', serverError);
-        // 서버 요청 자체가 실패한 경우에도 로컬에서는 삭제 처리
-        deleteScenario(id);
-        router.push('/scenarios');
+        // 잠시 대기 후 목록 페이지로 이동 (토스트 메시지를 볼 수 있도록)
+        setTimeout(() => {
+          router.push('/scenarios');
+        }, 1000);
+      } else {
+        showToast(result.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
+        setDeletingScenario(false);
       }
     } catch (err: any) {
       console.error('시나리오 삭제 오류:', err);
-      alert(err.message || '시나리오 삭제 중 오류가 발생했습니다.');
-    } finally {
+      showToast(err.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
       setDeletingScenario(false);
     }
   };
@@ -475,6 +489,28 @@ export default function ScenarioDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 토스트 메시지 표시 */}
+      {toast.show && (
+        <div 
+          className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transition-opacity duration-300 ${
+            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}
+        >
+          <div className="flex items-center">
+            {toast.type === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
+      
       {/* 헤더 */}
       <div className="bg-blue-700 text-white">
         <div className="container mx-auto py-6 px-4">
@@ -496,9 +532,17 @@ export default function ScenarioDetailPage() {
               </Link>
               <button 
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors shadow-sm"
+                disabled={deletingScenario}
+                className={`px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors shadow-sm ${
+                  deletingScenario ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                삭제
+                {deletingScenario ? (
+                  <span className="flex items-center">
+                    <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    삭제 중...
+                  </span>
+                ) : '삭제'}
               </button>
             </div>
           </div>

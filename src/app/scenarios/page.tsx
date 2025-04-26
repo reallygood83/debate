@@ -136,6 +136,31 @@ export default function ScenariosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
+  
+  // 토스트 메시지 상태 추가
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+  
+  // 토스트 메시지 표시 함수
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({
+      show: true,
+      message,
+      type
+    });
+    
+    // 3초 후 토스트 메시지 자동 숨김
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
 
   // 서버 시나리오 로드
   const loadServerScenarios = useCallback(async () => {
@@ -253,32 +278,45 @@ export default function ScenariosPage() {
     if (!confirm('이 시나리오를 서버에서 삭제하시겠습니까?')) return;
     
     try {
-      const response = await fetch(`/api/scenarios/${id}`, {
-        method: 'DELETE',
-      });
+      const result = await deleteScenario(id);
       
-      if (!response.ok) {
-        throw new Error('시나리오 삭제 중 오류가 발생했습니다.');
+      if (result.success) {
+        // 성공적으로 삭제된 경우 목록에서 제거
+        setServerScenarios(prev => prev.filter(scenario => scenario.id !== id));
+        // 성공 토스트 메시지 표시
+        showToast('시나리오가 성공적으로 삭제되었습니다.', 'success');
+        if (result.message) {
+          // 선택적으로 성공 메시지 표시
+          console.log(result.message);
+        }
+      } else {
+        showToast(result.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
       }
-      
-      // 성공적으로 삭제된 경우 목록에서 제거
-      setServerScenarios(prev => prev.filter(scenario => scenario.id !== id));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete server scenario:', error);
-      alert('시나리오 삭제 중 오류가 발생했습니다.');
+      showToast(error.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
     }
   };
   
   // 로컬에서 시나리오 삭제
-  const handleDeleteLocalScenario = (id: string) => {
-    if (!confirm('이 시나리오를 삭제하시겠습니까?')) return;
+  const handleDeleteLocalScenario = async (id: string) => {
+    if (!confirm('이 시나리오를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
     
     try {
-      deleteScenario(id);
-      setScenarios(prev => prev.filter(scenario => scenario.id !== id));
-    } catch (error) {
-      console.error('Failed to delete scenario:', error);
-      alert('시나리오 삭제 중 오류가 발생했습니다.');
+      const result = await deleteScenario(id);
+      if (result.success) {
+        // 삭제 성공 시 상태 업데이트
+        setScenarios(prev => prev.filter(s => s.id !== id));
+        // 성공 토스트 메시지 표시
+        showToast('시나리오가 성공적으로 삭제되었습니다.', 'success');
+      } else {
+        showToast(result.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
+      }
+    } catch (error: any) {
+      console.error('시나리오 삭제 오류:', error);
+      showToast(error.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
     }
   };
   
@@ -335,6 +373,28 @@ export default function ScenariosPage() {
   
   return (
     <div className="container mx-auto p-6">
+      {/* 토스트 메시지 표시 */}
+      {toast.show && (
+        <div 
+          className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transition-opacity duration-300 ${
+            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}
+        >
+          <div className="flex items-center">
+            {toast.type === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-blue-700">토론 시나리오</h1>
         <Link
