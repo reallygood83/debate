@@ -347,18 +347,54 @@ export default function ScenariosPage() {
   
   // 로컬에서 시나리오 삭제
   const handleDeleteLocalScenario = async (id: string) => {
+    if (!id) {
+      console.error("삭제 오류: 시나리오 ID가 없습니다.");
+      showToast('삭제할 시나리오 정보가 유효하지 않습니다.', 'error');
+      return;
+    }
+    
     if (!confirm('이 시나리오를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       return;
     }
     
     try {
+      console.log(`로컬 시나리오 ID ${id} 삭제 시작...`);
+      
+      // 삭제 전에 로컬 시나리오 상태 저장
+      const prevScenarios = [...scenarios];
+      console.log(`삭제 전 로컬 시나리오 수: ${prevScenarios.length}`);
+      
+      // 먼저 로컬에서 시나리오가 실제로 존재하는지 확인
+      const scenarioExists = getSavedScenarios().some(s => s.id === id);
+      if (!scenarioExists) {
+        console.log(`시나리오 ID ${id}가 로컬에 존재하지 않습니다. 상태만 업데이트합니다.`);
+        setScenarios(prev => {
+          const filtered = prev.filter(s => s.id !== id);
+          console.log(`로컬 상태 업데이트: ${filtered.length}개 시나리오 남음`);
+          return filtered;
+        });
+        showToast('시나리오가 목록에서 제거되었습니다.', 'success');
+        return;
+      }
+      
+      // 삭제 요청
       const result = await deleteScenario(id);
+      console.log(`시나리오 삭제 결과:`, result);
+      
       if (result.success) {
         // 삭제 성공 시 상태 업데이트
-        setScenarios(prev => prev.filter(s => s.id !== id));
+        setScenarios(prev => {
+          const filtered = prev.filter(s => s.id !== id);
+          console.log(`삭제 후 로컬 시나리오 수: ${filtered.length} (${prevScenarios.length - filtered.length}개 감소)`);
+          return filtered;
+        });
         // 성공 토스트 메시지 표시
         showToast('시나리오가 성공적으로 삭제되었습니다.', 'success');
+        if (result.message) {
+          console.log(`삭제 성공 메시지: ${result.message}`);
+        }
       } else {
+        console.error('시나리오 삭제 실패:', result.message);
         showToast(result.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
       }
     } catch (error: any) {

@@ -393,11 +393,20 @@ export async function saveScenario(scenario: Scenario): Promise<{ localSuccess: 
 
 export async function deleteScenario(scenarioId: string): Promise<{ success: boolean, message?: string }> {
   try {
+    // ID 유효성 검사 추가
+    if (!scenarioId) {
+      console.error("삭제 오류: 시나리오 ID가 없거나 유효하지 않습니다.");
+      return { 
+        success: false, 
+        message: '시나리오 ID가 유효하지 않습니다.' 
+      };
+    }
+    
     // 로컬에서 시나리오가 있는지 확인
     const localScenario = getLocalScenarioById(scenarioId);
     
     // 서버 삭제 시도 (서버에도 존재할 가능성이 있는 경우)
-    if (typeof window !== 'undefined' && !scenarioId.startsWith('local_')) {
+    if (typeof window !== 'undefined' && scenarioId && !scenarioId.startsWith('local_')) {
       console.log(`서버 및 로컬에서 시나리오 ID ${scenarioId} 삭제 시도...`);
       
       try {
