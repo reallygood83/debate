@@ -278,18 +278,37 @@ export default function ScenariosPage() {
     if (!confirm('이 시나리오를 서버에서 삭제하시겠습니까?')) return;
     
     try {
+      console.log(`시나리오 ID ${id} 삭제 시작...`);
+      
+      // 삭제 전에 서버 데이터 저장
+      const prevServerScenarios = [...serverScenarios];
+      console.log(`삭제 전 서버 시나리오 수: ${prevServerScenarios.length}`);
+      
       const result = await deleteScenario(id);
+      console.log(`시나리오 삭제 결과:`, result);
       
       if (result.success) {
         // 성공적으로 삭제된 경우 목록에서 제거
-        setServerScenarios(prev => prev.filter(scenario => scenario.id !== id));
+        setServerScenarios(prev => {
+          const filtered = prev.filter(scenario => scenario.id !== id);
+          console.log(`삭제 후 서버 시나리오 수: ${filtered.length} (${prevServerScenarios.length - filtered.length}개 감소)`);
+          return filtered;
+        });
+        
         // 성공 토스트 메시지 표시
         showToast('시나리오가 성공적으로 삭제되었습니다.', 'success');
         if (result.message) {
           // 선택적으로 성공 메시지 표시
-          console.log(result.message);
+          console.log(`삭제 성공 메시지: ${result.message}`);
         }
+        
+        // 선택적으로 서버에서 목록 다시 로드
+        setTimeout(() => {
+          console.log('서버 데이터 다시 로드 시도...');
+          loadServerScenarios();
+        }, 1500);
       } else {
+        console.error('시나리오 삭제 실패:', result.message);
         showToast(result.message || '시나리오 삭제 중 오류가 발생했습니다.', 'error');
       }
     } catch (error: any) {

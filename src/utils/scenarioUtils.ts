@@ -218,8 +218,13 @@ export async function deleteScenarioFromServer(scenarioId: string): Promise<bool
   try {
     console.log(`서버에서 시나리오 ID ${scenarioId} 삭제 시도...`);
     
-    // 재시도 횟수 증가, 특히 삭제 작업은 중요하므로
-    const response = await fetchWithRetry(`/api/scenarios/${scenarioId}`, {
+    // API 엔드포인트 구성
+    const url = `/api/scenarios/${scenarioId}`;
+    console.log(`API 호출 URL: ${url}`);
+    
+    // 캐시 방지 헤더 추가 및 요청 시도
+    console.log('DELETE 요청 시작...');
+    const response = await fetchWithRetry(url, {
       method: 'DELETE',
       headers: {
         'Cache-Control': 'no-cache, no-store',
@@ -227,7 +232,11 @@ export async function deleteScenarioFromServer(scenarioId: string): Promise<bool
       }
     }, 5); // 최대 5번 재시도
     
+    console.log(`서버 응답 상태: ${response.status} ${response.statusText}`);
+    
+    // 응답 디버깅을 위한 전체 응답 로깅
     const result = await response.json();
+    console.log('서버 응답 내용:', result);
     
     if (!result.success) {
       // 404 오류는 이미 없는 것이므로 성공으로 처리
