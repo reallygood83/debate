@@ -367,20 +367,20 @@ export default function CreateScenarioPage() {
                   disabled={isGenerating}
                   className="lovable-btn-secondary px-4 py-2 flex-1"
                 >
-                  {isGenerating ? 'AI 생성 중...' : 'AI로 시나리오 생성하기'}
+                  {isGenerating ? 'AI 생성 중...' : 'AI 시나리오 생성'}
                 </button>
                 
                 <button
                   type="submit"
                   className="lovable-btn-primary px-4 py-2 flex-1"
                 >
-                  시나리오 만들기
+                  시나리오 저장
                 </button>
               </div>
               
               {aiGenerationStatus === 'success' && (
                 <div className="bg-green-50 text-green-700 p-3 rounded-md mt-4" style={{ borderLeft: '3px solid var(--color-primary)' }}>
-                  AI가 시나리오를 생성했습니다! '시나리오 만들기' 버튼을 클릭하여 진행하세요.
+                  AI가 시나리오를 생성했습니다! '시나리오 저장' 버튼을 클릭하여 진행하세요.
                 </div>
               )}
               
@@ -402,34 +402,67 @@ export default function CreateScenarioPage() {
           </div>
         </div>
         
-        {/* 예시 및 추천 주제 */}
+        {/* 생성된 시나리오 미리보기 */}
         <div className="md:col-span-2">
-          <div className="lovable-card p-6" style={{ backgroundColor: 'var(--color-accent)' }}>
+          <div className="lovable-card p-6">
             <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>
-              추천 토론 주제
+              시나리오 미리보기
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sampleTopics.slice(0, 6).map((topic, index) => (
-                <div 
-                  key={index}
-                  className="bg-white p-3 rounded-md cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setFormData({ ...formData, title: topic })}
-                  style={{ borderLeft: '3px solid var(--color-primary)' }}
-                >
-                  <p>{topic}</p>
+            {formData.scenarioDetails ? (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-md border border-gray-200">
+                  <h3 className="text-lg font-semibold mb-2">{formData.title}</h3>
+                  
+                  {formData.scenarioDetails.description && (
+                    <div className="mb-3">
+                      <h4 className="text-md font-medium mb-1">토론 설명</h4>
+                      <p className="text-gray-700">{formData.scenarioDetails.description}</p>
+                    </div>
+                  )}
+                  
+                  {formData.scenarioDetails.learningObjectives && (
+                    <div className="mb-3">
+                      <h4 className="text-md font-medium mb-1">학습 목표</h4>
+                      <ul className="list-disc list-inside text-gray-700">
+                        {Array.isArray(formData.scenarioDetails.learningObjectives) 
+                          ? formData.scenarioDetails.learningObjectives.map((obj, idx) => <li key={idx}>{obj}</li>)
+                          : <li>{formData.scenarioDetails.learningObjectives}</li>
+                        }
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {formData.scenarioDetails.debateStructure && (
+                    <div className="mb-3">
+                      <h4 className="text-md font-medium mb-1">토론 구조</h4>
+                      <p className="text-gray-700">{formData.scenarioDetails.debateStructure}</p>
+                    </div>
+                  )}
+                  
+                  {formData.keywords && (
+                    <div className="mb-3">
+                      <h4 className="text-md font-medium mb-1">키워드</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.isArray(formData.keywords) 
+                          ? formData.keywords.map((keyword, idx) => (
+                            <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-sm">
+                              {keyword}
+                            </span>
+                          ))
+                          : <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-sm">{formData.keywords}</span>
+                        }
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-6">
-              <Link href="/topics/ai-topics" className="lovable-btn-primary py-2 px-4 inline-flex items-center">
-                AI로 새로운 토론 주제 찾기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </Link>
-            </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <p>AI 시나리오 생성 버튼을 클릭하여 시나리오를 생성해 보세요.</p>
+                <p className="mt-2 text-sm">시나리오가 생성되면 여기에 미리보기가 표시됩니다.</p>
+              </div>
+            )}
           </div>
           
           <div className="lovable-card p-6 mt-6">
