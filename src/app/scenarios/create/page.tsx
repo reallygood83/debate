@@ -423,61 +423,61 @@ export default function CreateScenarioPage() {
             )}
 
             {formData.scenarioDetails && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-rose-50 p-6 rounded-lg shadow-md">
                 <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">토론 배경</h3>
-                  <p className="text-gray-700">{formData.scenarioDetails.background}</p>
+                  <h3 className="text-xl font-semibold mb-2 text-rose-800">토론 배경</h3>
+                  <p className="text-rose-700 bg-white p-4 rounded-md shadow-sm">{formData.scenarioDetails.background}</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">찬성 측 논거</h3>
+                  <div className="bg-blue-50 p-4 rounded-md">
+                    <h3 className="text-xl font-semibold mb-2 text-blue-800">찬성 측 논거</h3>
                     <ul className="list-disc pl-5 space-y-2">
                       {formData.scenarioDetails.proArguments?.map((arg, index) => (
-                        <li key={index} className="text-gray-700">{arg}</li>
+                        <li key={index} className="text-blue-700">{arg}</li>
                       ))}
                     </ul>
                   </div>
                   
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">반대 측 논거</h3>
+                  <div className="bg-red-50 p-4 rounded-md">
+                    <h3 className="text-xl font-semibold mb-2 text-red-800">반대 측 논거</h3>
                     <ul className="list-disc pl-5 space-y-2">
                       {formData.scenarioDetails.conArguments?.map((arg, index) => (
-                        <li key={index} className="text-gray-700">{arg}</li>
+                        <li key={index} className="text-red-700">{arg}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
                 
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">교사 지도 팁</h3>
-                  <p className="text-gray-700">{formData.scenarioDetails.teacherTips}</p>
+                <div className="mb-6 bg-green-50 p-4 rounded-md">
+                  <h3 className="text-xl font-semibold mb-2 text-green-800">교사 지도 팁</h3>
+                  <p className="text-green-700">{formData.scenarioDetails.teacherTips}</p>
                 </div>
                 
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">핵심 질문</h3>
+                <div className="mb-6 bg-purple-50 p-4 rounded-md">
+                  <h3 className="text-xl font-semibold mb-2 text-purple-800">핵심 질문</h3>
                   <ul className="list-disc pl-5 space-y-2">
                     {formData.scenarioDetails.keyQuestions?.map((question, index) => (
-                      <li key={index} className="text-gray-700">{question}</li>
+                      <li key={index} className="text-purple-700">{question}</li>
                     ))}
                   </ul>
                 </div>
                 
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-2">기대 학습 성과</h3>
+                <div className="mb-6 bg-yellow-50 p-4 rounded-md">
+                  <h3 className="text-xl font-semibold mb-2 text-yellow-800">기대 학습 성과</h3>
                   <ul className="list-disc pl-5 space-y-2">
                     {formData.scenarioDetails.expectedOutcomes?.map((outcome, index) => (
-                      <li key={index} className="text-gray-700">{outcome}</li>
+                      <li key={index} className="text-yellow-700">{outcome}</li>
                     ))}
                   </ul>
                 </div>
                 
                 {formData.scenarioDetails.materials && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">준비물</h3>
+                  <div className="bg-teal-50 p-4 rounded-md">
+                    <h3 className="text-xl font-semibold mb-2 text-teal-800">준비물</h3>
                     <ul className="list-disc pl-5 space-y-2">
                       {formData.scenarioDetails.materials.map((material, index) => (
-                        <li key={index} className="text-gray-700">{material}</li>
+                        <li key={index} className="text-teal-700">{material}</li>
                       ))}
                     </ul>
                   </div>
