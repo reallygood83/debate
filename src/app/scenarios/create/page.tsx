@@ -404,63 +404,84 @@ export default function CreateScenarioPage() {
         
         {/* 생성된 시나리오 미리보기 */}
         <div className="md:col-span-2">
-          <div className="lovable-card p-6">
-            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-primary)' }}>
-              시나리오 미리보기
-            </h2>
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">시나리오 미리보기</h2>
             
-            {formData.scenarioDetails ? (
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-md border border-gray-200">
-                  <h3 className="text-lg font-semibold mb-2">{formData.title}</h3>
-                  
-                  {formData.scenarioDetails.description && (
-                    <div className="mb-3">
-                      <h4 className="text-md font-medium mb-1">토론 설명</h4>
-                      <p className="text-gray-700">{formData.scenarioDetails.description}</p>
-                    </div>
-                  )}
-                  
-                  {formData.scenarioDetails.learningObjectives && (
-                    <div className="mb-3">
-                      <h4 className="text-md font-medium mb-1">학습 목표</h4>
-                      <ul className="list-disc list-inside text-gray-700">
-                        {Array.isArray(formData.scenarioDetails.learningObjectives) 
-                          ? formData.scenarioDetails.learningObjectives.map((obj, idx) => <li key={idx}>{obj}</li>)
-                          : <li>{formData.scenarioDetails.learningObjectives}</li>
-                        }
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {formData.scenarioDetails.debateStructure && (
-                    <div className="mb-3">
-                      <h4 className="text-md font-medium mb-1">토론 구조</h4>
-                      <p className="text-gray-700">{formData.scenarioDetails.debateStructure}</p>
-                    </div>
-                  )}
-                  
-                  {formData.keywords && (
-                    <div className="mb-3">
-                      <h4 className="text-md font-medium mb-1">키워드</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.isArray(formData.keywords) 
-                          ? formData.keywords.map((keyword, idx) => (
-                            <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-sm">
-                              {keyword}
-                            </span>
-                          ))
-                          : <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-sm">{formData.keywords}</span>
-                        }
-                      </div>
-                    </div>
-                  )}
+            {isGenerating && (
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-2"></div>
+                  <p className="text-blue-700">AI가 시나리오를 생성하고 있습니다...</p>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>AI 시나리오 생성 버튼을 클릭하여 시나리오를 생성해 보세요.</p>
-                <p className="mt-2 text-sm">시나리오가 생성되면 여기에 미리보기가 표시됩니다.</p>
+            )}
+            
+            {aiGenerationStatus === 'error' && (
+              <div className="bg-red-50 p-4 rounded-lg mb-4">
+                <p className="text-red-700">시나리오 생성 중 오류가 발생했습니다. 다시 시도해주세요.</p>
+              </div>
+            )}
+
+            {formData.scenarioDetails && (
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">토론 배경</h3>
+                  <p className="text-gray-700">{formData.scenarioDetails.background}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">찬성 측 논거</h3>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {formData.scenarioDetails.proArguments?.map((arg, index) => (
+                        <li key={index} className="text-gray-700">{arg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">반대 측 논거</h3>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {formData.scenarioDetails.conArguments?.map((arg, index) => (
+                        <li key={index} className="text-gray-700">{arg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">교사 지도 팁</h3>
+                  <p className="text-gray-700">{formData.scenarioDetails.teacherTips}</p>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">핵심 질문</h3>
+                  <ul className="list-disc pl-5 space-y-2">
+                    {formData.scenarioDetails.keyQuestions?.map((question, index) => (
+                      <li key={index} className="text-gray-700">{question}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">기대 학습 성과</h3>
+                  <ul className="list-disc pl-5 space-y-2">
+                    {formData.scenarioDetails.expectedOutcomes?.map((outcome, index) => (
+                      <li key={index} className="text-gray-700">{outcome}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {formData.scenarioDetails.materials && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">준비물</h3>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {formData.scenarioDetails.materials.map((material, index) => (
+                        <li key={index} className="text-gray-700">{material}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
