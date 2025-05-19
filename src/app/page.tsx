@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 export default function HomePage() {
   return (
@@ -30,22 +31,19 @@ export default function HomePage() {
           
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/scenarios/create">
-              <button className="lovable-btn-primary px-8 py-3 rounded-full font-bold shadow-md">
+              <Button className="px-8 py-6 h-auto rounded-full font-bold" variant="default">
                 토론 시나리오 만들기
-              </button>
+              </Button>
             </Link>
             <Link href="/topics/ai-topics">
-              <button className="lovable-btn-secondary px-8 py-3 rounded-full font-bold shadow-md">
+              <Button className="px-8 py-6 h-auto rounded-full font-bold" variant="outline">
                 토론 주제 찾기
-              </button>
+              </Button>
             </Link>
             <Link href="/session">
-              <button 
-                className="px-8 py-3 rounded-full font-bold shadow-md transition-colors"
-                style={{ backgroundColor: 'var(--color-text)', color: 'white' }}
-              >
+              <Button className="px-8 py-6 h-auto rounded-full font-bold" variant="secondary">
                 토론 시작하기
-              </button>
+              </Button>
             </Link>
           </div>
         </div>
@@ -67,11 +65,13 @@ export default function HomePage() {
               <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
                 교과 연계 토론 시나리오를 자동으로 생성하고 관리하여 수업에 활용할 수 있습니다.
               </p>
-              <Link href="/scenarios" className="font-medium inline-flex items-center" style={{ color: 'var(--color-primary)' }}>
-                시나리오 둘러보기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+              <Link href="/scenarios">
+                <Button variant="link" className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                  시나리오 둘러보기
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </Button>
               </Link>
             </div>
             
@@ -85,11 +85,13 @@ export default function HomePage() {
               <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
                 단계별 가이드와 시간 관리 도구로 토론 수업을 효과적으로 운영합니다.
               </p>
-              <Link href="/session" className="font-medium inline-flex items-center" style={{ color: 'var(--color-primary)' }}>
-                토론 시작하기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+              <Link href="/session">
+                <Button variant="link" className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                  토론 시작하기
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </Button>
               </Link>
             </div>
             
@@ -103,12 +105,16 @@ export default function HomePage() {
               <p className="text-gray-600 mb-4 h-24 flex items-center justify-center">
                 AI 기반 맞춤형 피드백으로 학생들의 토론 참여와 학습 효과를 높입니다.
               </p>
-              <a href="https://lovabledebate25.vercel.app" target="_blank" rel="noopener noreferrer" className="font-medium inline-flex items-center" style={{ color: 'var(--color-primary)' }}>
-                피드백 시스템 보기
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </a>
+              <Link href="https://lovabledebate25.vercel.app" passHref legacyBehavior>
+                <a target="_blank" rel="noopener noreferrer">
+                  <Button variant="link" className="font-medium" style={{ color: 'var(--color-primary)' }}>
+                    피드백 시스템 보기
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </Button>
+                </a>
+              </Link>
             </div>
           </div>
         </div>
